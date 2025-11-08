@@ -9,3 +9,4 @@ Rust trading client.
 repository = "https://github.com/junioraw/irontrade"
 
 [dependencies]
+anyhow = "1.0.100"
