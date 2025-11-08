@@ -4,6 +4,7 @@ use crate::api::client::IronTradeClient;
 use anyhow::Result;
 
 trait IronTradeClientProvider {
-    async fn live_client<T: IronTradeClient>(&self) -> Result<Option<T>>;
-    async fn paper_client<T: IronTradeClient>(&self) -> Result<Option<T>>;
+    async fn get_client<T: IronTradeClient, U: AccountConfig>(&self, account_config: U) -> Result<Option<T>>;
 }
+
+trait AccountConfig {}
