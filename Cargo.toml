@@ -10,3 +10,4 @@ repository = "https://github.com/junioraw/irontrade"
 
 [dependencies]
 anyhow = "1.0.100"
+num-decimal = "0.2.5"
