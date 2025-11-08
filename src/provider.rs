@@ -3,11 +3,6 @@
 use crate::api::client::IronTradeClient;
 use anyhow::Result;
 
-pub trait IronTradeClientProvider<T: IronTradeClient, U: AccountConfig> {
-    async fn get_client(
-        &self,
-        account_config: U,
-    ) -> Result<T>;
+pub trait IronTradeClientProvider<T: IronTradeClient> {
+    async fn create_client(&self) -> Result<T>;
 }
-
-pub trait AccountConfig {}

@@ -3,7 +3,7 @@
 use num_decimal::Num;
 
 pub struct BuyMarketResponse {
-    order_id: String,
+    pub order_id: String,
 }
 
 pub struct SellMarketResponse {

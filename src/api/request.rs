@@ -3,8 +3,8 @@
 use num_decimal::Num;
 
 pub struct BuyMarketRequest {
-    asset_symbol: String,
-    amount: Amount,
+    pub asset_symbol: String,
+    pub amount: Amount,
 }
 
 pub struct SellMarketRequest {
@@ -12,7 +12,7 @@ pub struct SellMarketRequest {
     amount: Amount,
 }
 
-enum Amount {
+pub enum Amount {
     Quantity { quantity: Num },
     Notional { notional: Num },
 }
