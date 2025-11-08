@@ -7,11 +7,11 @@ use crate::api::response::{
 };
 
 pub trait IronTradeClient {
-    async fn buy_market(req: BuyMarketRequest) -> anyhow::Result<BuyMarketResponse>;
-    async fn sell_market(req: SellMarketRequest) -> anyhow::Result<SellMarketRequest>;
-    async fn get_orders() -> anyhow::Result<GetOrdersResponse>;
-    async fn get_order(order_id: String) -> anyhow::Result<GetOrderResponse>;
-    async fn get_open_position(asset_symbol: String)
+    async fn buy_market(&self, req: BuyMarketRequest) -> anyhow::Result<BuyMarketResponse>;
+    async fn sell_market(&self, req: SellMarketRequest) -> anyhow::Result<SellMarketRequest>;
+    async fn get_orders(&self) -> anyhow::Result<GetOrdersResponse>;
+    async fn get_order(&self, order_id: String) -> anyhow::Result<GetOrderResponse>;
+    async fn get_open_position(&self, asset_symbol: String)
                                -> anyhow::Result<GetOpenPositionResponse>;
-    async fn get_open_positions() -> anyhow::Result<GetOpenPositionsResponse>;
+    async fn get_open_positions(&self) -> anyhow::Result<GetOpenPositionsResponse>;
 }
