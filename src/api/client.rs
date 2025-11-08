@@ -6,7 +6,7 @@ use crate::api::response::{
     GetOrdersResponse,
 };
 
-trait IronTradeClient {
+pub trait IronTradeClient {
     async fn buy_market(req: BuyMarketRequest) -> anyhow::Result<BuyMarketResponse>;
     async fn sell_market(req: SellMarketRequest) -> anyhow::Result<SellMarketRequest>;
     async fn get_orders() -> anyhow::Result<GetOrdersResponse>;
