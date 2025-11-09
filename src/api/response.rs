@@ -7,41 +7,41 @@ pub struct BuyMarketResponse {
 }
 
 pub struct SellMarketResponse {
-    order_id: String,
+    pub order_id: String,
 }
 
 pub struct GetOrderResponse {
-    order: Order,
+    pub order: Order,
 }
 
 pub struct GetOrdersResponse {
-    orders: Vec<Order>,
+    pub orders: Vec<Order>,
 }
 
 pub struct GetOpenPositionResponse {
-    position: OpenPosition,
+    pub position: OpenPosition,
 }
 
 pub struct GetOpenPositionsResponse {
-    position: Vec<OpenPosition>,
+    pub positions: Vec<OpenPosition>,
 }
 
 pub struct Order {
-    order_id: String,
-    asset_symbol: String,
-    quantity: Num,
-    notional: Num,
-    filled_quantity: Num,
-    filled_avg_price: Num,
-    order_status: OrderStatus,
-    order_type: OrderType,
+    pub order_id: String,
+    pub asset_symbol: String,
+    pub quantity: Num,
+    pub notional: Num,
+    pub filled_quantity: Num,
+    pub filled_avg_price: Num,
+    pub order_status: OrderStatus,
+    pub order_type: OrderType,
 }
 
 pub struct OpenPosition {
-    asset_symbol: String,
-    avg_entry_price: Num,
-    quantity: Num,
-    market_value: Num,
+    pub asset_symbol: String,
+    pub avg_entry_price: Num,
+    pub quantity: Num,
+    pub market_value: Num,
 }
 
 pub enum OrderStatus {

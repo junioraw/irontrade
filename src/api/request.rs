@@ -8,8 +8,8 @@ pub struct BuyMarketRequest {
 }
 
 pub struct SellMarketRequest {
-    asset_symbol: String,
-    amount: Amount,
+    pub asset_symbol: String,
+    pub amount: Amount,
 }
 
 pub enum Amount {

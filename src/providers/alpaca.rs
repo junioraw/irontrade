@@ -4,7 +4,7 @@ use crate::api::client::IronTradeClient;
 use crate::api::request::{Amount, BuyMarketRequest, SellMarketRequest};
 use crate::api::response::{
     BuyMarketResponse, GetOpenPositionResponse, GetOpenPositionsResponse, GetOrderResponse,
-    GetOrdersResponse,
+    GetOrdersResponse, SellMarketResponse,
 };
 use crate::provider::IronTradeClientProvider;
 use anyhow::Result;
@@ -56,8 +56,18 @@ impl IronTradeClient for AlpacaIronTradeClient {
         })
     }
 
-    async fn sell_market(&self, req: SellMarketRequest) -> Result<SellMarketRequest> {
-        todo!()
+    async fn sell_market(&self, req: SellMarketRequest) -> Result<SellMarketResponse> {
+        let request = order::CreateReqInit {
+            type_: Type::Market,
+            ..Default::default()
+        }
+        .init(req.asset_symbol, Side::Sell, to_apca_amount(req.amount));
+
+        let order = self.apca_client.issue::<order::Create>(&request).await?;
+
+        Ok(SellMarketResponse {
+            order_id: order.id.to_string(),
+        })
     }
 
     async fn get_orders(&self) -> Result<GetOrdersResponse> {
