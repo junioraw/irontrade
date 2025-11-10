@@ -1,16 +1,14 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 use crate::api::request::{BuyMarketRequest, SellMarketRequest};
-use crate::api::response::{
-    BuyMarketResponse, GetOpenPositionResponse, GetOpenPositionsResponse,
-    GetOrdersResponse,
-};
+use crate::api::response::{BuyMarketResponse, GetOpenPositionResponse, GetOrdersResponse};
 
 pub trait IronTradeClient {
     async fn buy_market(&self, req: BuyMarketRequest) -> anyhow::Result<BuyMarketResponse>;
     async fn sell_market(&self, req: SellMarketRequest) -> anyhow::Result<SellMarketRequest>;
     async fn get_orders(&self) -> anyhow::Result<GetOrdersResponse>;
-    async fn get_open_position(&self, asset_symbol: String)
-                               -> anyhow::Result<GetOpenPositionResponse>;
-    async fn get_open_positions(&self) -> anyhow::Result<GetOpenPositionsResponse>;
+    async fn get_open_position(
+        &self,
+        asset_symbol: String,
+    ) -> anyhow::Result<GetOpenPositionResponse>;
 }

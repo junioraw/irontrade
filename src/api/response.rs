@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-use num_decimal::Num;
 use crate::api::request::Amount;
+use num_decimal::Num;
 
 pub struct BuyMarketResponse {
     pub order_id: String,
@@ -16,11 +16,7 @@ pub struct GetOrdersResponse {
 }
 
 pub struct GetOpenPositionResponse {
-    pub position: OpenPosition,
-}
-
-pub struct GetOpenPositionsResponse {
-    pub positions: Vec<OpenPosition>,
+    pub open_position: OpenPosition,
 }
 
 pub struct Order {
@@ -35,9 +31,9 @@ pub struct Order {
 
 pub struct OpenPosition {
     pub asset_symbol: String,
-    pub avg_entry_price: Num,
+    pub average_entry_price: Num,
     pub quantity: Num,
-    pub market_value: Num,
+    pub market_value: Option<Num>,
 }
 
 pub enum OrderStatus {

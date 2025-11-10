@@ -3,17 +3,19 @@
 use crate::api::client::IronTradeClient;
 use crate::api::request::{Amount, BuyMarketRequest, SellMarketRequest};
 use crate::api::response::{
-    BuyMarketResponse, GetOpenPositionResponse, GetOpenPositionsResponse,
-    GetOrdersResponse, Order, OrderStatus, OrderType, SellMarketResponse,
+    BuyMarketResponse, GetOpenPositionResponse, GetOrdersResponse,
+    OpenPosition, Order, OrderStatus, OrderType, SellMarketResponse,
 };
 use crate::provider::IronTradeClientProvider;
 use anyhow::Result;
+use apca::api::v2::asset::Symbol;
 use apca::api::v2::order::Amount as ApcaAmount;
 use apca::api::v2::order::Order as ApcaOrder;
 use apca::api::v2::order::Status as ApcaOrderStatus;
 use apca::api::v2::order::{Side, Type};
 use apca::api::v2::orders::ListReq;
-use apca::api::v2::{order, orders};
+use apca::api::v2::position::Position;
+use apca::api::v2::{order, orders, position};
 use apca::{ApiInfo, Client};
 
 pub struct AlpacaIronTradeClientProvider {
@@ -88,11 +90,14 @@ impl IronTradeClient for AlpacaIronTradeClient {
     }
 
     async fn get_open_position(&self, asset_symbol: String) -> Result<GetOpenPositionResponse> {
-        todo!()
-    }
+        let position = self
+            .apca_client
+            .issue::<position::Get>(&Symbol::Sym(asset_symbol))
+            .await?;
 
-    async fn get_open_positions(&self) -> Result<GetOpenPositionsResponse> {
-        todo!()
+        Ok(GetOpenPositionResponse {
+            open_position: from_apca_position(position),
+        })
     }
 }
 
@@ -107,6 +112,15 @@ fn from_apca_amount(amount: ApcaAmount) -> Amount {
     match amount {
         ApcaAmount::Quantity { quantity } => Amount::Quantity { quantity },
         ApcaAmount::Notional { notional } => Amount::Notional { notional },
+    }
+}
+
+fn from_apca_position(position: Position) -> OpenPosition {
+    OpenPosition {
+        asset_symbol: position.symbol.to_string(),
+        average_entry_price: position.average_entry_price,
+        quantity: position.quantity,
+        market_value: position.market_value,
     }
 }
 
