@@ -4,5 +4,5 @@ use crate::api::client::IronTradeClient;
 use anyhow::Result;
 
 pub trait IronTradeClientProvider<T: IronTradeClient> {
-    async fn create_client(&self) -> Result<T>;
+    fn create_client(&self) -> Result<T>;
 }

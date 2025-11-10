@@ -3,8 +3,8 @@
 use crate::api::client::IronTradeClient;
 use crate::api::request::{Amount, BuyMarketRequest, SellMarketRequest};
 use crate::api::response::{
-    BuyMarketResponse, GetOpenPositionResponse, GetOrdersResponse,
-    OpenPosition, Order, OrderStatus, OrderType, SellMarketResponse,
+    BuyMarketResponse, GetOpenPositionResponse, GetOrdersResponse, OpenPosition, Order,
+    OrderStatus, OrderType, SellMarketResponse,
 };
 use crate::provider::IronTradeClientProvider;
 use anyhow::Result;
@@ -29,12 +29,12 @@ impl AlpacaIronTradeClientProvider {
 }
 
 impl IronTradeClientProvider<AlpacaIronTradeClient> for AlpacaIronTradeClientProvider {
-    async fn create_client(&self) -> Result<AlpacaIronTradeClient> {
+    fn create_client(&self) -> Result<AlpacaIronTradeClient> {
         Ok(AlpacaIronTradeClient::new(self.api_info.clone()))
     }
 }
 
-struct AlpacaIronTradeClient {
+pub struct AlpacaIronTradeClient {
     apca_client: Client,
 }
 
@@ -151,5 +151,30 @@ fn from_apca_order(order: ApcaOrder) -> Order {
         average_fill_price: order.average_fill_price,
         status: from_apca_order_status(order.status),
         type_: from_apca_order_type(order.type_),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use apca::ApiInfo;
+    use num_decimal::Num;
+
+    #[tokio::test]
+    async fn buy_market_returns_order_id() {
+        let client = create_client();
+        let order_id = client
+            .buy_market(BuyMarketRequest {
+                asset_symbol: "AAPL".into(),
+                amount: Amount::Notional { notional: Num::from(20) },
+            })
+            .await.unwrap().order_id;
+        assert_ne!(order_id, "")
+    }
+
+    fn create_client() -> AlpacaIronTradeClient {
+        AlpacaIronTradeClientProvider::new(ApiInfo::from_env().unwrap())
+            .create_client()
+            .unwrap()
     }
 }
