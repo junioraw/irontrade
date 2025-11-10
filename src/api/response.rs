@@ -41,6 +41,7 @@ pub enum OrderStatus {
     PartiallyFilled,
     Filled,
     Expired,
+    Unimplemented
 }
 
 pub enum OrderType {

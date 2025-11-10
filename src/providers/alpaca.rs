@@ -9,9 +9,9 @@ use crate::api::response::{
 use crate::provider::IronTradeClientProvider;
 use anyhow::Result;
 use apca::api::v2::asset::Symbol;
-use apca::api::v2::order::Amount as ApcaAmount;
 use apca::api::v2::order::Order as ApcaOrder;
 use apca::api::v2::order::Status as ApcaOrderStatus;
+use apca::api::v2::order::{Amount as ApcaAmount, TimeInForce};
 use apca::api::v2::order::{Side, Type};
 use apca::api::v2::orders::ListReq;
 use apca::api::v2::position::Position;
@@ -50,6 +50,7 @@ impl IronTradeClient for AlpacaIronTradeClient {
     async fn buy_market(&self, req: BuyMarketRequest) -> Result<BuyMarketResponse> {
         let request = order::CreateReqInit {
             type_: Type::Market,
+            time_in_force: TimeInForce::UntilCanceled,
             ..Default::default()
         }
         .init(req.asset_symbol, Side::Buy, to_apca_amount(req.amount));
@@ -130,7 +131,7 @@ fn from_apca_order_status(status: ApcaOrderStatus) -> OrderStatus {
         ApcaOrderStatus::PartiallyFilled => OrderStatus::PartiallyFilled,
         ApcaOrderStatus::Filled => OrderStatus::Filled,
         ApcaOrderStatus::Expired => OrderStatus::Expired,
-        _ => todo!(),
+        _ => OrderStatus::Unimplemented,
     }
 }
 
@@ -159,16 +160,65 @@ mod tests {
     use super::*;
     use apca::ApiInfo;
     use num_decimal::Num;
+    use std::time::Duration;
+    use tokio::time::sleep;
 
     #[tokio::test]
     async fn buy_market_returns_order_id() {
         let client = create_client();
         let order_id = client
             .buy_market(BuyMarketRequest {
-                asset_symbol: "AAPL".into(),
-                amount: Amount::Notional { notional: Num::from(20) },
+                asset_symbol: "BTC/USD".into(),
+                amount: Amount::Notional {
+                    notional: Num::from(20),
+                },
             })
-            .await.unwrap().order_id;
+            .await
+            .unwrap()
+            .order_id;
+
+        assert_ne!(order_id, "")
+    }
+
+    #[tokio::test]
+    #[ignore] // can take a while before the buy order is filled in order to verify a successful sale
+    async fn sell_market_returns_order_id() {
+        let client = create_client();
+
+        let buy_order_id = client
+            .buy_market(BuyMarketRequest {
+                asset_symbol: "AAVE/USD".into(),
+                amount: Amount::Notional {
+                    notional: Num::from(20),
+                },
+            })
+            .await
+            .unwrap()
+            .order_id;
+
+        loop {
+            let orders = client.get_orders().await.unwrap().orders;
+            let buy_order = orders
+                .iter()
+                .find(|order| order.order_id == buy_order_id)
+                .unwrap();
+            if matches!(buy_order.status, OrderStatus::Filled) {
+                break;
+            }
+            sleep(Duration::from_secs(1)).await;
+        }
+
+        let order_id = client
+            .sell_market(SellMarketRequest {
+                asset_symbol: "AAVE/USD".into(),
+                amount: Amount::Notional {
+                    notional: Num::from(10),
+                },
+            })
+            .await
+            .unwrap()
+            .order_id;
+
         assert_ne!(order_id, "")
     }
 
