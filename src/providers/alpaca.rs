@@ -155,6 +155,7 @@ fn from_apca_order(order: ApcaOrder) -> Order {
     }
 }
 
+// Tests use environment variable keys for api secret, so make sure those are set to a paper test account
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -220,6 +221,26 @@ mod tests {
             .order_id;
 
         assert_ne!(order_id, "")
+    }
+
+    #[tokio::test]
+    async fn get_orders() {
+        let client = create_client();
+        let pre_existing_orders = client.get_orders().await.unwrap().orders;
+
+        client
+            .buy_market(BuyMarketRequest {
+                asset_symbol: "BTC/USD".into(),
+                amount: Amount::Notional {
+                    notional: Num::from(20),
+                },
+            })
+            .await
+            .unwrap();
+
+        let orders = client.get_orders().await.unwrap().orders;
+
+        assert_eq!(orders.len(), pre_existing_orders.len() + 1)
     }
 
     fn create_client() -> AlpacaIronTradeClient {
