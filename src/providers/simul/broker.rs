@@ -2,8 +2,10 @@
 
 use num_decimal::Num;
 use std::collections::HashMap;
+use anyhow::Result;
 
 pub struct SimulBroker {
+    order_requests: Vec<OrderRequest>,
     orders: Vec<Order>,
     exchange_rates: HashMap<AssetPair, Num>,
     balance: HashMap<String, Num>
@@ -12,14 +14,24 @@ pub struct SimulBroker {
 impl SimulBroker {
     pub fn new(starting_balance: HashMap<String, Num>) -> Self {
         Self {
+            order_requests: vec![],
             orders: vec![],
             exchange_rates: HashMap::new(),
             balance: starting_balance.clone()
         }
     }
 
-    pub fn place_order(&mut self, order: Order) {
-        self.orders.push(order);
+    pub fn place_order(&mut self, order: OrderRequest) -> Result<String> {
+        self.order_requests.push(order);
+        todo!()
+    }
+
+    pub fn get_order(self, order_id: String) -> Result<Order> {
+        todo!()
+    }
+
+    pub fn get_positions() -> HashMap<String, Num> {
+        todo!()
     }
 
     pub fn set_exchange_rate(&mut self, asset_pair: AssetPair, rate: Num) {
@@ -27,10 +39,17 @@ impl SimulBroker {
     }
 }
 
-pub struct Order {
+pub struct OrderRequest {
     asset_pair: AssetPair,
     quantity_to_sell: Num,
     min_price: Num,
+}
+
+pub struct Order {
+    order_id: String,
+    asset_pair: AssetPair,
+    filled_quantity: Num,
+    filled_percentage: Num,
 }
 
 pub struct Position {
