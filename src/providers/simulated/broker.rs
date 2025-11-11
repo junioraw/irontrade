@@ -4,14 +4,14 @@ use num_decimal::Num;
 use std::collections::HashMap;
 use anyhow::Result;
 
-pub struct SimulBroker {
+pub struct SimulatedBroker {
     order_requests: Vec<OrderRequest>,
     orders: Vec<Order>,
     exchange_rates: HashMap<AssetPair, Num>,
     balance: HashMap<String, Num>
 }
 
-impl SimulBroker {
+impl SimulatedBroker {
     pub fn new(starting_balance: HashMap<String, Num>) -> Self {
         Self {
             order_requests: vec![],
