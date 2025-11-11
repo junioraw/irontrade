@@ -12,7 +12,6 @@ use num_decimal::Num;
 use std::collections::HashMap;
 
 mod broker;
-mod simulated;
 
 pub struct SimulatedIronTradeClientProvider {
     usd_balance: Num,
