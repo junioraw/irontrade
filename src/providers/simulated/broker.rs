@@ -34,31 +34,35 @@ impl SimulatedBroker {
         todo!()
     }
 
+    pub fn get_exchange_rate(&self, asset_pair: &AssetPair) -> Option<Num> {
+        self.exchange_rates.get(&asset_pair).map(Num::clone)    
+    }
+    
     pub fn set_exchange_rate(&mut self, asset_pair: AssetPair, rate: Num) {
         self.exchange_rates.insert(asset_pair, rate);
     }
 }
 
 pub struct OrderRequest {
-    asset_pair: AssetPair,
-    quantity_to_sell: Num,
-    min_price: Num,
+    pub asset_pair: AssetPair,
+    pub quantity_to_buy: Num,
+    pub max_price: Num,
 }
 
 pub struct Order {
-    order_id: String,
-    asset_pair: AssetPair,
-    filled_quantity: Num,
-    filled_percentage: Num,
+    pub order_id: String,
+    pub asset_pair: AssetPair,
+    pub filled_quantity: Num,
+    pub filled_percentage: Num,
 }
 
 pub struct Position {
-    asset: String,
-    quantity: Num,
+    pub asset: String,
+    pub quantity: Num,
 }
 
 #[derive(Hash, PartialEq, Eq)]
 pub struct AssetPair {
-    from_asset: String,
-    to_asset: String,
+    pub from_asset: String,
+    pub to_asset: String,
 }

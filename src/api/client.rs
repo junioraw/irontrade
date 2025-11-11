@@ -8,11 +8,11 @@ use anyhow::Result;
 
 pub trait IronTradeClient {
     fn buy_market(
-        &self,
+        &mut self,
         req: BuyMarketRequest,
     ) -> impl Future<Output = Result<BuyMarketResponse>> + Send;
     fn sell_market(
-        &self,
+        &mut self,
         req: SellMarketRequest,
     ) -> impl Future<Output = Result<SellMarketResponse>> + Send;
     fn get_orders(&self) -> impl Future<Output = Result<GetOrdersResponse>> + Send;

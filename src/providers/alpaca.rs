@@ -47,7 +47,7 @@ impl AlpacaIronTradeClient {
 }
 
 impl IronTradeClient for AlpacaIronTradeClient {
-    async fn buy_market(&self, req: BuyMarketRequest) -> Result<BuyMarketResponse> {
+    async fn buy_market(&mut self, req: BuyMarketRequest) -> Result<BuyMarketResponse> {
         let request = order::CreateReqInit {
             type_: Type::Market,
             time_in_force: TimeInForce::UntilCanceled,
@@ -62,7 +62,7 @@ impl IronTradeClient for AlpacaIronTradeClient {
         })
     }
 
-    async fn sell_market(&self, req: SellMarketRequest) -> Result<SellMarketResponse> {
+    async fn sell_market(&mut self, req: SellMarketRequest) -> Result<SellMarketResponse> {
         let request = order::CreateReqInit {
             type_: Type::Market,
             ..Default::default()
@@ -166,7 +166,7 @@ mod tests {
 
     #[tokio::test]
     async fn buy_market_returns_order_id() {
-        let client = create_client();
+        let mut client = create_client();
         let order_id = client
             .buy_market(BuyMarketRequest {
                 asset_symbol: "BTC/USD".into(),
@@ -184,7 +184,7 @@ mod tests {
     #[tokio::test]
     #[ignore] // can take a while before the buy order is filled in order to verify a successful sale
     async fn sell_market_returns_order_id() {
-        let client = create_client();
+        let mut client = create_client();
 
         let buy_order_id = client
             .buy_market(BuyMarketRequest {
@@ -225,7 +225,7 @@ mod tests {
 
     #[tokio::test]
     async fn get_orders() {
-        let client = create_client();
+        let mut client = create_client();
         let pre_existing_orders = client.get_orders().await.unwrap().orders;
 
         client
