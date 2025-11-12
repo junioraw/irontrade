@@ -1,4 +1,9 @@
+0.1.3
+----
+- Added DO NOT USE to README
+
 0.1.2
+----
 - Add simulated iron trade client;
 - Add documentation for trait IronTradeClient;
 - Add README content
