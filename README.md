@@ -4,7 +4,7 @@ irontrade
 - [Documentation][docs-rs]
 - [Changelog](CHANGELOG.md)
 
-<span style="color:red">*work in progress, non-functional yet*</span>
+$${\color{red}work \space in \space progress}$$
 
 **irontrade** is a library for interacting with different trading brokers, as well as creating custom local brokers for more streamlined testing.
 
