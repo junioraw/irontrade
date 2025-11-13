@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-use crate::api::request::Amount;
+use crate::api::common::Amount;
 use num_decimal::Num;
 
 pub struct BuyMarketResponse {
@@ -41,7 +41,7 @@ pub enum OrderStatus {
     PartiallyFilled,
     Filled,
     Expired,
-    Unimplemented
+    Unimplemented,
 }
 
 pub enum OrderType {

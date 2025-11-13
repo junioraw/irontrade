@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-use num_decimal::Num;
+use crate::api::common::Amount;
 
 pub struct BuyMarketRequest {
     pub asset_symbol: String,
@@ -12,7 +12,3 @@ pub struct SellMarketRequest {
     pub amount: Amount,
 }
 
-pub enum Amount {
-    Quantity { quantity: Num },
-    Notional { notional: Num },
-}

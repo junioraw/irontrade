@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 use crate::api::client::IronTradeClient;
-use crate::api::request::{Amount, BuyMarketRequest, SellMarketRequest};
+use crate::api::common::Amount;
+use crate::api::request::{BuyMarketRequest, SellMarketRequest};
 use crate::api::response::{
     BuyMarketResponse, GetOpenPositionResponse, GetOrdersResponse, OpenPosition, Order,
     OrderStatus, OrderType, SellMarketResponse,
@@ -159,6 +160,7 @@ fn from_apca_order(order: ApcaOrder) -> Order {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::api::common::Amount;
     use apca::ApiInfo;
     use num_decimal::Num;
     use std::time::Duration;

@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-use anyhow::Error;
-use anyhow::{Result, format_err};
+use anyhow::{format_err, Result};
 use num_decimal::Num;
 use std::collections::{HashMap, HashSet};
 use std::fmt::{Display, Formatter};

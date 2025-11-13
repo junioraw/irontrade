@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 use crate::api::client::IronTradeClient;
-use crate::api::request::{Amount, BuyMarketRequest, SellMarketRequest};
+use crate::api::common::Amount;
+use crate::api::request::{BuyMarketRequest, SellMarketRequest};
 use crate::api::response::{
     BuyMarketResponse, GetOpenPositionResponse, GetOrdersResponse, SellMarketResponse,
 };
@@ -50,7 +51,10 @@ impl IronTradeClient for SimulatedIronTradeClient {
             to_asset = req.asset_symbol.to_string();
         }
 
-        let asset_pair = AssetPair { from_asset, to_asset };
+        let asset_pair = AssetPair {
+            from_asset,
+            to_asset,
+        };
 
         let quantity_to_buy: Num;
         let max_price: Num = self.broker.get_exchange_rate(&asset_pair).unwrap();
@@ -64,15 +68,13 @@ impl IronTradeClient for SimulatedIronTradeClient {
             }
         }
 
-        let order_id = self.broker.place_order( OrderRequest {
+        let order_id = self.broker.place_order(OrderRequest {
             asset_pair,
             quantity_to_buy,
             max_price,
         })?;
 
-        Ok(BuyMarketResponse {
-            order_id,
-        })
+        Ok(BuyMarketResponse { order_id })
     }
 
     async fn sell_market(&mut self, req: SellMarketRequest) -> Result<SellMarketResponse> {
