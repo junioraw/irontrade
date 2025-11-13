@@ -8,8 +8,7 @@ use std::fmt::{Display, Formatter};
 use uuid::Uuid;
 
 pub struct SimulatedBroker {
-    orders: HashSet<Order>,
-    orders_v2: HashMap<String, OrderV2>,
+    orders: HashMap<String, Order>,
     exchange_rates: HashMap<AssetPair, Num>,
     balances: HashMap<String, Num>,
 }
@@ -17,15 +16,14 @@ pub struct SimulatedBroker {
 impl SimulatedBroker {
     pub fn new(starting_balances: HashMap<String, Num>) -> Self {
         Self {
-            orders: HashSet::new(),
-            orders_v2: HashMap::new(),
+            orders: HashMap::new(),
             exchange_rates: HashMap::new(),
             balances: starting_balances.clone(),
         }
     }
 
     // Only supports market orders, in this case they execute immediately since the exchange rate is determined in this method
-    pub fn place_order_v2(&mut self, order_req: OrderRequestV2) -> Result<String> {
+    pub fn place_order(&mut self, order_req: OrderRequest) -> Result<String> {
         let order_id = Uuid::new_v4().to_string();
 
         let asset_on_sale = &order_req.asset_pair.asset_on_sale;
@@ -63,9 +61,9 @@ impl SimulatedBroker {
         self.update_balance(asset_on_sale, -notional);
         self.update_balance(&order_req.asset_pair.asset_being_bought, quantity.clone());
 
-        self.orders_v2.insert(
+        self.orders.insert(
             order_id.clone(),
-            OrderV2 {
+            Order {
                 order_id: order_id.clone(),
                 asset_pair: order_req.asset_pair,
                 filled_amount: FilledAmount {
@@ -74,61 +72,6 @@ impl SimulatedBroker {
                 },
             },
         );
-
-        Ok(order_id)
-    }
-
-    pub fn place_order(&mut self, order_req: OrderRequest) -> Result<String> {
-        let order_id = Uuid::new_v4().to_string();
-
-        let asset_on_sale = &order_req.asset_pair.asset_on_sale;
-        let asset_being_bought = &order_req.asset_pair.asset_being_bought;
-
-        let exchange_rate = self
-            .exchange_rates
-            .get(&order_req.asset_pair)
-            .ok_or(format_err!(
-                "{} is not a valid asset pair",
-                order_req.asset_pair
-            ))?;
-
-        let balance = self
-            .balances
-            .get(asset_on_sale)
-            .ok_or(format_err!("No available balance for {}", asset_on_sale))?;
-
-        if *balance < &order_req.quantity_to_buy / &order_req.min_exchange_rate {
-            return Err(format_err!(
-                "Not enough {} balance to place the order",
-                asset_on_sale
-            ));
-        }
-
-        if exchange_rate >= &order_req.min_exchange_rate {
-            self.orders.insert(Order {
-                order_id: order_id.clone(),
-                asset_pair: order_req.asset_pair.clone(),
-                quantity: order_req.quantity_to_buy.clone(),
-                max_price: exchange_rate.clone(),
-                filled: true,
-            });
-
-            self.update_balance(asset_on_sale, -&order_req.quantity_to_buy / exchange_rate);
-            self.update_balance(asset_being_bought, order_req.quantity_to_buy);
-        } else {
-            self.orders.insert(Order {
-                order_id: order_id.clone(),
-                asset_pair: order_req.asset_pair.clone(),
-                quantity: order_req.quantity_to_buy.clone(),
-                max_price: order_req.min_exchange_rate.clone(),
-                filled: false,
-            });
-
-            self.update_balance(
-                asset_on_sale,
-                -&order_req.quantity_to_buy / &order_req.min_exchange_rate,
-            );
-        }
 
         Ok(order_id)
     }
@@ -160,28 +103,13 @@ impl SimulatedBroker {
     }
 }
 
-pub struct OrderRequestV2 {
+pub struct OrderRequest {
     pub asset_pair: AssetPair,
     pub amount: Amount,
 }
 
-pub struct OrderRequest {
-    pub asset_pair: AssetPair,
-    pub quantity_to_buy: Num,
-    pub min_exchange_rate: Num,
-}
-
-#[derive(Hash, PartialEq, Eq, Clone)]
-pub struct Order {
-    pub order_id: String,
-    pub asset_pair: AssetPair,
-    quantity: Num,
-    max_price: Num,
-    pub filled: bool,
-}
-
 #[derive(Hash, PartialEq, Eq)]
-pub struct OrderV2 {
+pub struct Order {
     pub order_id: String,
     pub asset_pair: AssetPair,
     pub filled_amount: FilledAmount,
