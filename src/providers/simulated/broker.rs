@@ -5,6 +5,7 @@ use num_decimal::Num;
 use std::collections::{HashMap, HashSet};
 use std::fmt::{Display, Formatter};
 use uuid::Uuid;
+use crate::api::common::Amount;
 
 pub struct SimulatedBroker {
     orders: HashSet<Order>,
@@ -21,64 +22,64 @@ impl SimulatedBroker {
         }
     }
 
-    pub fn place_order(&mut self, order: OrderRequest) -> Result<String> {
+    pub fn place_order(&mut self, order_req: OrderRequest) -> Result<String> {
         let order_id = Uuid::new_v4().to_string();
-        let exchange_rate = self.exchange_rates.get(&order.asset_pair);
+        let exchange_rate = self.exchange_rates.get(&order_req.asset_pair);
         match exchange_rate {
             None => {
                 return Err(format_err!(
                     "{} is not a valid asset pair",
-                    order.asset_pair
+                    order_req.asset_pair
                 ));
             }
             Some(exchange_rate) => {
-                let balance = self.balances.get(&order.asset_pair.from_asset);
+                let balance = self.balances.get(&order_req.asset_pair.from_asset);
                 match balance {
                     None => {
                         return Err(format_err!(
                             "No available balance for {}",
-                            &order.asset_pair.from_asset
+                            &order_req.asset_pair.from_asset
                         ));
                     }
                     Some(balance) => {
-                        if *balance < &order.quantity_to_buy * &order.max_price {
+                        if *balance < &order_req.quantity_to_buy * &order_req.max_price {
                             return Err(format_err!(
                                 "Not enough {} balance to place the order",
-                                order.asset_pair.from_asset
+                                order_req.asset_pair.from_asset
                             ));
                         }
-                        if exchange_rate <= &order.max_price {
+                        if exchange_rate <= &order_req.max_price {
                             self.orders.insert(Order {
                                 order_id: order_id.clone(),
-                                asset_pair: order.asset_pair.clone(),
-                                quantity: order.quantity_to_buy.clone(),
+                                asset_pair: order_req.asset_pair.clone(),
+                                quantity: order_req.quantity_to_buy.clone(),
                                 max_price: exchange_rate.clone(),
                                 filled: true,
                             });
                             self.balances.insert(
-                                order.asset_pair.from_asset.clone(),
-                                balance - &order.quantity_to_buy * exchange_rate,
+                                order_req.asset_pair.from_asset.clone(),
+                                balance - &order_req.quantity_to_buy * exchange_rate,
                             );
                             let previous_balance = self
                                 .balances
-                                .get(&order.asset_pair.to_asset)
+                                .get(&order_req.asset_pair.to_asset)
                                 .map(|value| value.clone())
                                 .unwrap_or(Num::from(0));
                             self.balances.insert(
-                                order.asset_pair.to_asset.clone(),
-                                previous_balance + &order.quantity_to_buy,
+                                order_req.asset_pair.to_asset.clone(),
+                                previous_balance + &order_req.quantity_to_buy,
                             );
                         } else {
                             self.orders.insert(Order {
                                 order_id: order_id.clone(),
-                                asset_pair: order.asset_pair.clone(),
-                                quantity: order.quantity_to_buy.clone(),
-                                max_price: order.max_price.clone(),
+                                asset_pair: order_req.asset_pair.clone(),
+                                quantity: order_req.quantity_to_buy.clone(),
+                                max_price: order_req.max_price.clone(),
                                 filled: false,
                             });
                             self.balances.insert(
-                                order.asset_pair.from_asset.clone(),
-                                balance - &order.quantity_to_buy * &order.max_price,
+                                order_req.asset_pair.from_asset.clone(),
+                                balance - &order_req.quantity_to_buy * &order_req.max_price,
                             );
                         }
                     }
@@ -105,6 +106,11 @@ impl SimulatedBroker {
     }
 }
 
+pub struct OrderRequestV2 {
+    pub asset_pair: AssetPair,
+    pub amount: Amount
+}
+
 pub struct OrderRequest {
     pub asset_pair: AssetPair,
     pub quantity_to_buy: Num,
@@ -118,6 +124,17 @@ pub struct Order {
     quantity: Num,
     max_price: Num,
     pub filled: bool,
+}
+
+pub struct OrderV2 {
+    pub order_id: String,
+    pub asset_pair: AssetPair,
+    pub filled_amount: Option<FilledAmount>
+}
+
+pub struct FilledAmount {
+    pub quantity: Num,
+    pub notional: Num,
 }
 
 pub struct Position {
