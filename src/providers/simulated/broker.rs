@@ -11,7 +11,7 @@ pub struct SimulatedBroker {
     orders: HashSet<Order>,
     exchange_rates: HashMap<AssetPair, Num>,
     total_balances: HashMap<String, Num>,
-    available_balances: HashMap<String, Num>,
+    buying_power_balances: HashMap<String, Num>,
 }
 
 impl SimulatedBroker {
@@ -20,7 +20,7 @@ impl SimulatedBroker {
             orders: HashSet::new(),
             exchange_rates: HashMap::new(),
             total_balances: starting_balances.clone(),
-            available_balances: starting_balances.clone(),
+            buying_power_balances: starting_balances.clone(),
         }
     }
 
