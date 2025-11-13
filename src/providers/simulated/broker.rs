@@ -3,7 +3,7 @@
 use crate::api::common::Amount;
 use anyhow::{Result, format_err};
 use num_decimal::Num;
-use std::collections::{HashMap, HashSet};
+use std::collections::HashMap;
 use std::fmt::{Display, Formatter};
 use uuid::Uuid;
 
@@ -23,6 +23,7 @@ impl SimulatedBroker {
     }
 
     // Only supports market orders, in this case they execute immediately since the exchange rate is determined in this method
+    // TODO: Add support for limit orders
     pub fn place_order(&mut self, order_req: OrderRequest) -> Result<String> {
         let order_id = Uuid::new_v4().to_string();
 
@@ -76,30 +77,39 @@ impl SimulatedBroker {
         Ok(order_id)
     }
 
-    fn update_balance(&mut self, asset: &String, delta: Num) {
-        let previous_balance = self
-            .balances
-            .get(asset)
-            .map(|value| value.clone())
-            .unwrap_or(Num::from(0));
+    pub fn get_order(&self, order_id: String) -> Result<Order> {
+        self.orders
+            .get(&order_id)
+            .map(Order::clone)
+            .ok_or(format_err!("Order with id {} doesn't exist", order_id))
+    }
+
+    pub fn get_balance(&self, asset: String) -> Result<Num> {
         self.balances
-            .insert(asset.clone(), previous_balance + delta);
+            .get(&asset)
+            .map(Num::clone)
+            .ok_or(format_err!("Asset {} doesn't exist", asset))
     }
 
-    pub fn get_order(self, order_id: String) -> Result<Order> {
-        todo!()
-    }
-
-    pub fn get_positions() -> HashMap<String, Num> {
-        todo!()
-    }
-
-    pub fn get_exchange_rate(&self, asset_pair: &AssetPair) -> Option<Num> {
-        self.exchange_rates.get(&asset_pair).map(Num::clone)
+    pub fn get_exchange_rate(&self, asset_pair: &AssetPair) -> Result<Num> {
+        self.exchange_rates
+            .get(&asset_pair)
+            .map(Num::clone)
+            .ok_or(format_err!("Asset pair {} can't be traded", asset_pair))
     }
 
     pub fn set_exchange_rate(&mut self, asset_pair: AssetPair, rate: Num) {
         self.exchange_rates.insert(asset_pair, rate);
+    }
+
+    fn update_balance(&mut self, asset: &String, delta: Num) {
+        let previous_balance = self
+            .balances
+            .get(asset)
+            .map(Num::clone)
+            .unwrap_or(Num::from(0));
+        self.balances
+            .insert(asset.clone(), previous_balance + delta);
     }
 }
 
@@ -108,14 +118,14 @@ pub struct OrderRequest {
     pub amount: Amount,
 }
 
-#[derive(Hash, PartialEq, Eq)]
+#[derive(Hash, PartialEq, Eq, Clone)]
 pub struct Order {
     pub order_id: String,
     pub asset_pair: AssetPair,
     pub filled_amount: FilledAmount,
 }
 
-#[derive(Hash, PartialEq, Eq)]
+#[derive(Hash, PartialEq, Eq, Clone)]
 pub struct FilledAmount {
     pub quantity: Num,
     pub notional: Num,
