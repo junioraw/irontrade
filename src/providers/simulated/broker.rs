@@ -141,11 +141,6 @@ pub struct FilledAmount {
     pub notional: Num,
 }
 
-pub struct Position {
-    pub asset: String,
-    pub quantity: Num,
-}
-
 #[derive(Hash, PartialEq, Eq, Clone)]
 pub struct AssetPair {
     pub asset_on_sale: String,
