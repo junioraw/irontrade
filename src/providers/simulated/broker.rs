@@ -29,6 +29,9 @@ impl SimulatedBroker {
     pub fn place_order(&mut self, order_req: OrderRequest) -> Result<String> {
         let order_id = Uuid::new_v4().to_string();
 
+        let asset_on_sale = &order_req.asset_pair.asset_on_sale;
+        let asset_being_bought = &order_req.asset_pair.asset_being_bought;
+
         let exchange_rate = self
             .exchange_rates
             .get(&order_req.asset_pair)
@@ -39,16 +42,13 @@ impl SimulatedBroker {
 
         let balance = self
             .balances
-            .get(&order_req.asset_pair.asset_on_sale)
-            .ok_or(format_err!(
-                "No available balance for {}",
-                &order_req.asset_pair.asset_on_sale
-            ))?;
+            .get(asset_on_sale)
+            .ok_or(format_err!("No available balance for {}", asset_on_sale))?;
 
         if *balance < &order_req.quantity_to_buy * &order_req.max_price {
             return Err(format_err!(
                 "Not enough {} balance to place the order",
-                order_req.asset_pair.asset_on_sale
+                asset_on_sale
             ));
         }
 
@@ -60,19 +60,9 @@ impl SimulatedBroker {
                 max_price: exchange_rate.clone(),
                 filled: true,
             });
-            self.balances.insert(
-                order_req.asset_pair.asset_on_sale.clone(),
-                balance - &order_req.quantity_to_buy * exchange_rate,
-            );
-            let previous_balance = self
-                .balances
-                .get(&order_req.asset_pair.asset_being_bought)
-                .map(|value| value.clone())
-                .unwrap_or(Num::from(0));
-            self.balances.insert(
-                order_req.asset_pair.asset_being_bought.clone(),
-                previous_balance + &order_req.quantity_to_buy,
-            );
+
+            self.update_balance(asset_on_sale, -&order_req.quantity_to_buy * exchange_rate);
+            self.update_balance(asset_being_bought, order_req.quantity_to_buy);
         } else {
             self.orders.insert(Order {
                 order_id: order_id.clone(),
@@ -81,13 +71,24 @@ impl SimulatedBroker {
                 max_price: order_req.max_price.clone(),
                 filled: false,
             });
-            self.balances.insert(
-                order_req.asset_pair.asset_on_sale.clone(),
-                balance - &order_req.quantity_to_buy * &order_req.max_price,
+
+            self.update_balance(
+                asset_on_sale,
+                -&order_req.quantity_to_buy * &order_req.max_price,
             );
         }
 
         Ok(order_id)
+    }
+
+    fn update_balance(&mut self, asset: &String, delta: Num) {
+        let previous_balance = self
+            .balances
+            .get(asset)
+            .map(|value| value.clone())
+            .unwrap_or(Num::from(0));
+        self.balances
+            .insert(asset.clone(), previous_balance + delta);
     }
 
     pub fn get_order(self, order_id: String) -> Result<Order> {
@@ -151,6 +152,9 @@ pub struct AssetPair {
 
 impl Display for AssetPair {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        f.write_fmt(format_args!("{}/{}", self.asset_being_bought, self.asset_on_sale))
+        f.write_fmt(format_args!(
+            "{}/{}",
+            self.asset_being_bought, self.asset_on_sale
+        ))
     }
 }
