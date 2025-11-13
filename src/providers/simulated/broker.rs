@@ -10,7 +10,8 @@ use uuid::Uuid;
 pub struct SimulatedBroker {
     orders: HashSet<Order>,
     exchange_rates: HashMap<AssetPair, Num>,
-    balances: HashMap<String, Num>,
+    total_balances: HashMap<String, Num>,
+    available_balances: HashMap<String, Num>,
 }
 
 impl SimulatedBroker {
@@ -18,7 +19,8 @@ impl SimulatedBroker {
         Self {
             orders: HashSet::new(),
             exchange_rates: HashMap::new(),
-            balances: starting_balances.clone(),
+            total_balances: starting_balances.clone(),
+            available_balances: starting_balances.clone(),
         }
     }
 
@@ -41,7 +43,7 @@ impl SimulatedBroker {
             ))?;
 
         let balance = self
-            .balances
+            .total_balances
             .get(asset_on_sale)
             .ok_or(format_err!("No available balance for {}", asset_on_sale))?;
 
@@ -83,11 +85,11 @@ impl SimulatedBroker {
 
     fn update_balance(&mut self, asset: &String, delta: Num) {
         let previous_balance = self
-            .balances
+            .total_balances
             .get(asset)
             .map(|value| value.clone())
             .unwrap_or(Num::from(0));
-        self.balances
+        self.total_balances
             .insert(asset.clone(), previous_balance + delta);
     }
 
