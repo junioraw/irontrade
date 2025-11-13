@@ -9,23 +9,73 @@ use uuid::Uuid;
 
 pub struct SimulatedBroker {
     orders: HashSet<Order>,
+    orders_v2: HashMap<String, OrderV2>,
     exchange_rates: HashMap<AssetPair, Num>,
-    total_balances: HashMap<String, Num>,
-    buying_power_balances: HashMap<String, Num>,
+    balances: HashMap<String, Num>,
 }
 
 impl SimulatedBroker {
     pub fn new(starting_balances: HashMap<String, Num>) -> Self {
         Self {
             orders: HashSet::new(),
+            orders_v2: HashMap::new(),
             exchange_rates: HashMap::new(),
-            total_balances: starting_balances.clone(),
-            buying_power_balances: starting_balances.clone(),
+            balances: starting_balances.clone(),
         }
     }
 
+    // Only supports market orders, in this case they execute immediately since the exchange rate is determined in this method
     pub fn place_order_v2(&mut self, order_req: OrderRequestV2) -> Result<String> {
-        todo!()
+        let order_id = Uuid::new_v4().to_string();
+
+        let asset_on_sale = &order_req.asset_pair.asset_on_sale;
+
+        let exchange_rate = self
+            .exchange_rates
+            .get(&order_req.asset_pair)
+            .ok_or(format_err!(
+                "{} is not a valid asset pair",
+                order_req.asset_pair
+            ))?;
+
+        let balance = self.balances.get(asset_on_sale).ok_or(format_err!(
+            "Not enough {} balance to place the order",
+            asset_on_sale
+        ))?;
+
+        let quantity: &Num = match &order_req.amount {
+            Amount::Quantity { quantity } => quantity,
+            Amount::Notional { notional } => &(notional * exchange_rate),
+        };
+
+        let notional: &Num = match &order_req.amount {
+            Amount::Quantity { quantity } => &(quantity / exchange_rate),
+            Amount::Notional { notional } => notional,
+        };
+
+        if balance < notional {
+            return Err(format_err!(
+                "Not enough {} balance to place the order",
+                asset_on_sale
+            ));
+        }
+
+        self.update_balance(asset_on_sale, -notional);
+        self.update_balance(&order_req.asset_pair.asset_being_bought, quantity.clone());
+
+        self.orders_v2.insert(
+            order_id.clone(),
+            OrderV2 {
+                order_id: order_id.clone(),
+                asset_pair: order_req.asset_pair,
+                filled_amount: FilledAmount {
+                    quantity: quantity.clone(),
+                    notional: notional.clone(),
+                },
+            },
+        );
+
+        Ok(order_id)
     }
 
     pub fn place_order(&mut self, order_req: OrderRequest) -> Result<String> {
@@ -43,7 +93,7 @@ impl SimulatedBroker {
             ))?;
 
         let balance = self
-            .total_balances
+            .balances
             .get(asset_on_sale)
             .ok_or(format_err!("No available balance for {}", asset_on_sale))?;
 
@@ -85,11 +135,11 @@ impl SimulatedBroker {
 
     fn update_balance(&mut self, asset: &String, delta: Num) {
         let previous_balance = self
-            .total_balances
+            .balances
             .get(asset)
             .map(|value| value.clone())
             .unwrap_or(Num::from(0));
-        self.total_balances
+        self.balances
             .insert(asset.clone(), previous_balance + delta);
     }
 
@@ -130,12 +180,14 @@ pub struct Order {
     pub filled: bool,
 }
 
+#[derive(Hash, PartialEq, Eq)]
 pub struct OrderV2 {
     pub order_id: String,
     pub asset_pair: AssetPair,
-    pub filled_amount: Option<FilledAmount>,
+    pub filled_amount: FilledAmount,
 }
 
+#[derive(Hash, PartialEq, Eq)]
 pub struct FilledAmount {
     pub quantity: Num,
     pub notional: Num,
