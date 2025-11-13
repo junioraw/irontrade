@@ -71,7 +71,7 @@ impl IronTradeClient for SimulatedIronTradeClient {
         let order_id = self.broker.place_order(OrderRequest {
             asset_pair,
             quantity_to_buy,
-            max_price,
+            min_exchange_rate: max_price,
         })?;
 
         Ok(BuyMarketResponse { order_id })

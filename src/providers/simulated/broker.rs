@@ -45,14 +45,14 @@ impl SimulatedBroker {
             .get(asset_on_sale)
             .ok_or(format_err!("No available balance for {}", asset_on_sale))?;
 
-        if *balance < &order_req.quantity_to_buy * &order_req.max_price {
+        if *balance < &order_req.quantity_to_buy / &order_req.min_exchange_rate {
             return Err(format_err!(
                 "Not enough {} balance to place the order",
                 asset_on_sale
             ));
         }
 
-        if exchange_rate <= &order_req.max_price {
+        if exchange_rate >= &order_req.min_exchange_rate {
             self.orders.insert(Order {
                 order_id: order_id.clone(),
                 asset_pair: order_req.asset_pair.clone(),
@@ -61,20 +61,20 @@ impl SimulatedBroker {
                 filled: true,
             });
 
-            self.update_balance(asset_on_sale, -&order_req.quantity_to_buy * exchange_rate);
+            self.update_balance(asset_on_sale, -&order_req.quantity_to_buy / exchange_rate);
             self.update_balance(asset_being_bought, order_req.quantity_to_buy);
         } else {
             self.orders.insert(Order {
                 order_id: order_id.clone(),
                 asset_pair: order_req.asset_pair.clone(),
                 quantity: order_req.quantity_to_buy.clone(),
-                max_price: order_req.max_price.clone(),
+                max_price: order_req.min_exchange_rate.clone(),
                 filled: false,
             });
 
             self.update_balance(
                 asset_on_sale,
-                -&order_req.quantity_to_buy * &order_req.max_price,
+                -&order_req.quantity_to_buy / &order_req.min_exchange_rate,
             );
         }
 
@@ -116,7 +116,7 @@ pub struct OrderRequestV2 {
 pub struct OrderRequest {
     pub asset_pair: AssetPair,
     pub quantity_to_buy: Num,
-    pub max_price: Num,
+    pub min_exchange_rate: Num,
 }
 
 #[derive(Hash, PartialEq, Eq, Clone)]
