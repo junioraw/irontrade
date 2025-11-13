@@ -52,8 +52,8 @@ impl IronTradeClient for SimulatedIronTradeClient {
         }
 
         let asset_pair = AssetPair {
-            from_asset,
-            to_asset,
+            asset_on_sale: from_asset,
+            asset_being_bought: to_asset,
         };
 
         let quantity_to_buy: Num;

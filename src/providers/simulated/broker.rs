@@ -39,19 +39,19 @@ impl SimulatedBroker {
 
         let balance = self
             .balances
-            .get(&order_req.asset_pair.from_asset)
+            .get(&order_req.asset_pair.asset_on_sale)
             .ok_or(format_err!(
                 "No available balance for {}",
-                &order_req.asset_pair.from_asset
+                &order_req.asset_pair.asset_on_sale
             ))?;
 
         if *balance < &order_req.quantity_to_buy * &order_req.max_price {
             return Err(format_err!(
                 "Not enough {} balance to place the order",
-                order_req.asset_pair.from_asset
+                order_req.asset_pair.asset_on_sale
             ));
         }
-        
+
         if exchange_rate <= &order_req.max_price {
             self.orders.insert(Order {
                 order_id: order_id.clone(),
@@ -61,16 +61,16 @@ impl SimulatedBroker {
                 filled: true,
             });
             self.balances.insert(
-                order_req.asset_pair.from_asset.clone(),
+                order_req.asset_pair.asset_on_sale.clone(),
                 balance - &order_req.quantity_to_buy * exchange_rate,
             );
             let previous_balance = self
                 .balances
-                .get(&order_req.asset_pair.to_asset)
+                .get(&order_req.asset_pair.asset_being_bought)
                 .map(|value| value.clone())
                 .unwrap_or(Num::from(0));
             self.balances.insert(
-                order_req.asset_pair.to_asset.clone(),
+                order_req.asset_pair.asset_being_bought.clone(),
                 previous_balance + &order_req.quantity_to_buy,
             );
         } else {
@@ -82,7 +82,7 @@ impl SimulatedBroker {
                 filled: false,
             });
             self.balances.insert(
-                order_req.asset_pair.from_asset.clone(),
+                order_req.asset_pair.asset_on_sale.clone(),
                 balance - &order_req.quantity_to_buy * &order_req.max_price,
             );
         }
@@ -145,12 +145,12 @@ pub struct Position {
 
 #[derive(Hash, PartialEq, Eq, Clone)]
 pub struct AssetPair {
-    pub from_asset: String,
-    pub to_asset: String,
+    pub asset_on_sale: String,
+    pub asset_being_bought: String,
 }
 
 impl Display for AssetPair {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        f.write_fmt(format_args!("{}/{}", self.to_asset, self.from_asset))
+        f.write_fmt(format_args!("{}/{}", self.asset_being_bought, self.asset_on_sale))
     }
 }
