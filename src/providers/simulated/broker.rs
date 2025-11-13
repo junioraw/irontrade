@@ -22,6 +22,10 @@ impl SimulatedBroker {
         }
     }
 
+    pub fn place_order_v2(&mut self, order_req: OrderRequestV2) -> Result<String> {
+        todo!()
+    }
+
     pub fn place_order(&mut self, order_req: OrderRequest) -> Result<String> {
         let order_id = Uuid::new_v4().to_string();
         let exchange_rate = self.exchange_rates.get(&order_req.asset_pair);
