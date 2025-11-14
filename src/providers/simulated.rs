@@ -1,13 +1,13 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 use crate::api::client::IronTradeClient;
-use crate::api::common::Amount;
+use crate::api::common::{Amount, AssetPair};
 use crate::api::request::{BuyMarketRequest, SellMarketRequest};
 use crate::api::response::{
     BuyMarketResponse, GetOpenPositionResponse, GetOrdersResponse, SellMarketResponse,
 };
 use crate::provider::IronTradeClientProvider;
-use crate::providers::simulated::broker::{AssetPair, OrderRequest, SimulatedBroker};
+use crate::providers::simulated::broker::{OrderRequest, SimulatedBroker};
 use anyhow::Result;
 use num_decimal::Num;
 use std::collections::HashMap;
