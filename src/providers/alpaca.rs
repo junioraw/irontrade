@@ -1,21 +1,16 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 use crate::api::client::IronTradeClient;
-use crate::api::common::Amount;
 use crate::api::request::{BuyMarketRequest, SellMarketRequest};
 use crate::api::response::{
-    BuyMarketResponse, GetOpenPositionResponse, GetOrdersResponse, OpenPosition, Order,
-    OrderStatus, OrderType, SellMarketResponse,
+    BuyMarketResponse, GetOpenPositionResponse, GetOrdersResponse, Order, SellMarketResponse,
 };
 use crate::provider::IronTradeClientProvider;
 use anyhow::Result;
 use apca::api::v2::asset::Symbol;
-use apca::api::v2::order::Order as ApcaOrder;
-use apca::api::v2::order::Status as ApcaOrderStatus;
-use apca::api::v2::order::{Amount as ApcaAmount, TimeInForce};
+use apca::api::v2::order::TimeInForce;
 use apca::api::v2::order::{Side, Type};
 use apca::api::v2::orders::ListReq;
-use apca::api::v2::position::Position;
 use apca::api::v2::{order, orders, position};
 use apca::{ApiInfo, Client};
 
@@ -54,7 +49,7 @@ impl IronTradeClient for AlpacaIronTradeClient {
             time_in_force: TimeInForce::UntilCanceled,
             ..Default::default()
         }
-        .init(req.asset_symbol, Side::Buy, to_apca_amount(req.amount));
+        .init(req.asset_symbol, Side::Buy, req.amount.into());
 
         let order = self.apca_client.issue::<order::Create>(&request).await?;
 
@@ -68,7 +63,7 @@ impl IronTradeClient for AlpacaIronTradeClient {
             type_: Type::Market,
             ..Default::default()
         }
-        .init(req.asset_symbol, Side::Sell, to_apca_amount(req.amount));
+        .init(req.asset_symbol, Side::Sell, req.amount.into());
 
         let order = self.apca_client.issue::<order::Create>(&request).await?;
 
@@ -85,7 +80,7 @@ impl IronTradeClient for AlpacaIronTradeClient {
             })
             .await?
             .iter()
-            .map(|order| from_apca_order(order.clone()))
+            .map(|order| order.clone().into())
             .collect();
 
         Ok(GetOrdersResponse { orders })
@@ -98,61 +93,8 @@ impl IronTradeClient for AlpacaIronTradeClient {
             .await?;
 
         Ok(GetOpenPositionResponse {
-            open_position: from_apca_position(position),
+            open_position: position.into(),
         })
-    }
-}
-
-fn to_apca_amount(amount: Amount) -> ApcaAmount {
-    match amount {
-        Amount::Quantity { quantity } => ApcaAmount::Quantity { quantity },
-        Amount::Notional { notional } => ApcaAmount::Notional { notional },
-    }
-}
-
-fn from_apca_amount(amount: ApcaAmount) -> Amount {
-    match amount {
-        ApcaAmount::Quantity { quantity } => Amount::Quantity { quantity },
-        ApcaAmount::Notional { notional } => Amount::Notional { notional },
-    }
-}
-
-fn from_apca_position(position: Position) -> OpenPosition {
-    OpenPosition {
-        asset_symbol: position.symbol.to_string(),
-        average_entry_price: position.average_entry_price,
-        quantity: position.quantity,
-        market_value: position.market_value,
-    }
-}
-
-fn from_apca_order_status(status: ApcaOrderStatus) -> OrderStatus {
-    match status {
-        ApcaOrderStatus::New => OrderStatus::New,
-        ApcaOrderStatus::PartiallyFilled => OrderStatus::PartiallyFilled,
-        ApcaOrderStatus::Filled => OrderStatus::Filled,
-        ApcaOrderStatus::Expired => OrderStatus::Expired,
-        _ => OrderStatus::Unimplemented,
-    }
-}
-
-fn from_apca_order_type(type_: Type) -> OrderType {
-    match type_ {
-        Type::Market => OrderType::Market,
-        Type::Limit => OrderType::Limit,
-        _ => todo!(),
-    }
-}
-
-fn from_apca_order(order: ApcaOrder) -> Order {
-    Order {
-        order_id: order.id.to_string(),
-        asset_symbol: order.symbol,
-        filled_quantity: order.filled_quantity,
-        amount: from_apca_amount(order.amount),
-        average_fill_price: order.average_fill_price,
-        status: from_apca_order_status(order.status),
-        type_: from_apca_order_type(order.type_),
     }
 }
 
@@ -161,6 +103,7 @@ fn from_apca_order(order: ApcaOrder) -> Order {
 mod tests {
     use super::*;
     use crate::api::common::Amount;
+    use crate::api::response::OrderStatus;
     use apca::ApiInfo;
     use num_decimal::Num;
     use std::time::Duration;
