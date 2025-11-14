@@ -92,7 +92,9 @@ impl SimulatedBroker {
     }
 
     pub fn set_exchange_rate(&mut self, asset_pair: AssetPair, rate: Num) {
-        self.exchange_rates.insert(asset_pair, rate);
+        self.exchange_rates.insert(asset_pair.clone(), rate.clone());
+        self.exchange_rates
+            .insert(asset_pair.inverse(), Num::from(1) / rate);
     }
 
     fn update_balance(&mut self, asset: &str, delta: Num) {
@@ -127,6 +129,15 @@ pub struct FilledAmount {
 pub struct AssetPair {
     pub asset_on_sale: String,
     pub asset_being_bought: String,
+}
+
+impl AssetPair {
+    pub fn inverse(&self) -> AssetPair {
+        AssetPair {
+            asset_on_sale: self.asset_being_bought.clone(),
+            asset_being_bought: self.asset_on_sale.clone(),
+        }
+    }
 }
 
 impl FromStr for AssetPair {
@@ -230,6 +241,32 @@ mod tests {
     }
 
     #[test]
+    fn place_order_inverse_exchange_rate_updates_balances() {
+        let mut balances = HashMap::new();
+        balances.insert("USD".into(), Num::from_str("14.1").unwrap());
+        let mut broker = SimulatedBroker::new(balances);
+        broker.set_exchange_rate(
+            AssetPair::from_str("USD/GBP").unwrap(),
+            Num::from_str("0.8").unwrap(),
+        );
+
+        broker
+            .place_order(OrderRequest {
+                asset_pair: AssetPair::from_str("GBP/USD").unwrap(),
+                amount: Amount::Quantity {
+                    quantity: Num::from(10),
+                },
+            })
+            .unwrap();
+
+        assert_eq!(
+            broker.get_balance(&"USD".into()),
+            Num::from_str("1.6").unwrap()
+        );
+        assert_eq!(broker.get_balance(&"GBP".into()), Num::from(10));
+    }
+
+    #[test]
     fn place_order_returns_valid_order_id() {
         let mut balances = HashMap::new();
         balances.insert("USD".into(), Num::from_str("14.1").unwrap());
@@ -272,14 +309,17 @@ mod tests {
             .unwrap();
 
         let order = broker.get_order(&order_id).unwrap();
-        assert_eq!(order, Order {
-            order_id,
-            asset_pair: AssetPair::from_str("GBP/USD").unwrap(),
-            filled_amount: FilledAmount {
-                quantity: Num::from(10),
-                notional: Num::from_str("13.1").unwrap()
+        assert_eq!(
+            order,
+            Order {
+                order_id,
+                asset_pair: AssetPair::from_str("GBP/USD").unwrap(),
+                filled_amount: FilledAmount {
+                    quantity: Num::from(10),
+                    notional: Num::from_str("13.1").unwrap()
+                }
             }
-        });
+        );
     }
 
     #[test]
@@ -302,13 +342,29 @@ mod tests {
             .unwrap();
 
         let order = broker.get_order(&order_id).unwrap();
-        assert_eq!(order, Order {
-            order_id,
-            asset_pair: AssetPair::from_str("GBP/USD").unwrap(),
-            filled_amount: FilledAmount {
-                quantity: Num::from(5),
-                notional: Num::from_str("6.55").unwrap()
+        assert_eq!(
+            order,
+            Order {
+                order_id,
+                asset_pair: AssetPair::from_str("GBP/USD").unwrap(),
+                filled_amount: FilledAmount {
+                    quantity: Num::from(5),
+                    notional: Num::from_str("6.55").unwrap()
+                }
             }
-        });
+        );
+    }
+
+    #[test]
+    pub fn get_exchange_rate_inverse_set_exchange_rate() {
+        let mut broker = SimulatedBroker::new(HashMap::new());
+        broker.set_exchange_rate(
+            AssetPair::from_str("USD/GBP").unwrap(),
+            Num::from_str("0.8").unwrap(),
+        );
+        let exchange_rate = broker
+            .get_exchange_rate(&AssetPair::from_str("GBP/USD").unwrap())
+            .unwrap();
+        assert_eq!(exchange_rate, Num::from_str("1.25").unwrap());
     }
 }
