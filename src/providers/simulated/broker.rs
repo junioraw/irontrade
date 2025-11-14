@@ -25,22 +25,7 @@ impl SimulatedBroker {
     // Only supports market orders, in this case they execute immediately since the exchange rate is determined in this method
     // TODO: Add support for limit orders
     pub fn place_order(&mut self, order_req: OrderRequest) -> Result<String> {
-        let order_id = Uuid::new_v4().to_string();
-
-        let asset_on_sale = &order_req.asset_pair.asset_on_sale;
-
-        let exchange_rate = self
-            .exchange_rates
-            .get(&order_req.asset_pair)
-            .ok_or(format_err!(
-                "{} is not a valid asset pair",
-                order_req.asset_pair
-            ))?;
-
-        let balance = self.balances.get(asset_on_sale).ok_or(format_err!(
-            "Not enough {} balance to place the order",
-            asset_on_sale
-        ))?;
+        let exchange_rate = &self.get_exchange_rate(&order_req.asset_pair)?;
 
         let quantity: &Num = match &order_req.amount {
             Amount::Quantity { quantity } => quantity,
@@ -52,6 +37,9 @@ impl SimulatedBroker {
             Amount::Notional { notional } => notional,
         };
 
+        let asset_on_sale = &order_req.asset_pair.asset_on_sale;
+        let balance = &self.get_balance(asset_on_sale);
+
         if balance < notional {
             return Err(format_err!(
                 "Not enough {} balance to place the order",
@@ -61,6 +49,8 @@ impl SimulatedBroker {
 
         self.update_balance(asset_on_sale, -notional);
         self.update_balance(&order_req.asset_pair.asset_being_bought, quantity.clone());
+
+        let order_id = Uuid::new_v4().to_string();
 
         self.orders.insert(
             order_id.clone(),
@@ -77,18 +67,18 @@ impl SimulatedBroker {
         Ok(order_id)
     }
 
-    pub fn get_order(&self, order_id: String) -> Result<Order> {
+    pub fn get_order(&self, order_id: &String) -> Result<Order> {
         self.orders
-            .get(&order_id)
+            .get(order_id)
             .map(Order::clone)
             .ok_or(format_err!("Order with id {} doesn't exist", order_id))
     }
 
-    pub fn get_balance(&self, asset: String) -> Result<Num> {
+    pub fn get_balance(&self, asset: &String) -> Num {
         self.balances
-            .get(&asset)
+            .get(asset)
             .map(Num::clone)
-            .ok_or(format_err!("Asset {} doesn't exist", asset))
+            .unwrap_or(Num::from(0))
     }
 
     pub fn get_exchange_rate(&self, asset_pair: &AssetPair) -> Result<Num> {
