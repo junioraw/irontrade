@@ -28,7 +28,7 @@ impl IronTradeClientProvider<SimulatedIronTradeClient> for SimulatedIronTradeCli
     fn create_client(&self) -> Result<SimulatedIronTradeClient> {
         let mut balances = HashMap::new();
         balances.insert("USD".into(), self.usd_balance.clone());
-        let broker = SimulatedBroker::new("USD".into(), balances);
+        let broker = SimulatedBroker::new_single_notional("USD".into(), balances);
         Ok(SimulatedIronTradeClient { broker })
     }
 }
