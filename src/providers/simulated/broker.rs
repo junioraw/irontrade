@@ -6,10 +6,11 @@ use anyhow::{format_err, Result};
 use num_decimal::Num;
 use std::collections::HashMap;
 use uuid::Uuid;
+use crate::api::response::{Order, OrderStatus, OrderType};
 
 pub struct SimulatedBroker {
     notional_asset: String,
-    orders: HashMap<String, Order>,
+    orders: HashMap<String, FilledOrder>,
     exchange_rates: HashMap<AssetPair, Num>,
     balances: HashMap<String, Num>,
 }
@@ -76,7 +77,7 @@ impl SimulatedBroker {
 
         self.orders.insert(
             order_id.clone(),
-            Order {
+            FilledOrder {
                 order_id: order_id.clone(),
                 asset_pair: order_req.asset_pair,
                 filled_amount: FilledAmount {
@@ -89,10 +90,14 @@ impl SimulatedBroker {
         Ok(order_id)
     }
 
-    pub fn get_order(&self, order_id: &String) -> Result<Order> {
+    pub fn get_orders(&self) -> Vec<FilledOrder> {
+        self.orders.values().cloned().collect()
+    }
+    
+    pub fn get_order(&self, order_id: &String) -> Result<FilledOrder> {
         self.orders
             .get(order_id)
-            .map(Order::clone)
+            .map(FilledOrder::clone)
             .ok_or(format_err!("Order with id {} doesn't exist", order_id))
     }
 
@@ -139,10 +144,24 @@ impl SimulatedBroker {
 }
 
 #[derive(Hash, PartialEq, Eq, Clone, Debug)]
-pub struct Order {
+pub struct FilledOrder {
     pub order_id: String,
     pub asset_pair: AssetPair,
     pub filled_amount: FilledAmount,
+}
+
+impl From<FilledOrder> for Order {
+    fn from(order: FilledOrder) -> Self {
+        Self {
+            order_id: order.order_id,
+            asset_symbol: order.asset_pair.to_string(),
+            amount: Amount::Quantity { quantity: order.filled_amount.quantity.clone() },
+            filled_quantity: order.filled_amount.quantity.clone(),
+            average_fill_price: Some(order.filled_amount.quantity / order.filled_amount.notional),
+            status: OrderStatus::Filled,
+            type_: OrderType::Market,
+        }
+    }
 }
 
 #[derive(Hash, PartialEq, Eq, Clone, Debug)]
@@ -281,7 +300,7 @@ mod tests {
         let order = broker.get_order(&order_id).unwrap();
         assert_eq!(
             order,
-            Order {
+            FilledOrder {
                 order_id,
                 asset_pair: AssetPair::from_str("GBP/USD").unwrap(),
                 filled_amount: FilledAmount {
@@ -316,7 +335,7 @@ mod tests {
         let order = broker.get_order(&order_id).unwrap();
         assert_eq!(
             order,
-            Order {
+            FilledOrder {
                 order_id,
                 asset_pair: AssetPair::from_str("GBP/USD").unwrap(),
                 filled_amount: FilledAmount {

@@ -60,7 +60,14 @@ impl IronTradeClient for SimulatedIronTradeClient {
     }
 
     async fn get_orders(&self) -> Result<GetOrdersResponse> {
-        todo!()
+        Ok(GetOrdersResponse {
+            orders: self
+                .broker
+                .get_orders()
+                .iter()
+                .map(|order| order.clone().into())
+                .collect(),
+        })
     }
 
     async fn get_open_position(&self, asset_symbol: String) -> Result<GetOpenPositionResponse> {
