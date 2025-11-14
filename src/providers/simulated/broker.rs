@@ -205,4 +205,50 @@ mod tests {
 
         assert_eq!(err.to_string(), "Not enough USD balance to place the order");
     }
+
+    #[test]
+    fn place_order_updates_balances() {
+        let mut balances = HashMap::new();
+        balances.insert("USD".into(), Num::from_str("14.1").unwrap());
+        let mut broker = SimulatedBroker::new(balances);
+        broker.set_exchange_rate(
+            AssetPair::from_str("GBP/USD").unwrap(),
+            Num::from_str("1.31").unwrap(),
+        );
+
+        broker
+            .place_order(OrderRequest {
+                asset_pair: AssetPair::from_str("GBP/USD").unwrap(),
+                amount: Amount::Quantity {
+                    quantity: Num::from(10),
+                },
+            })
+            .unwrap();
+
+        assert_eq!(broker.get_balance(&"USD".into()), Num::from(1));
+        assert_eq!(broker.get_balance(&"GBP".into()), Num::from(10));
+    }
+
+    #[test]
+    fn place_order_returns_valid_order_id() {
+        let mut balances = HashMap::new();
+        balances.insert("USD".into(), Num::from_str("14.1").unwrap());
+        let mut broker = SimulatedBroker::new(balances);
+        broker.set_exchange_rate(
+            AssetPair::from_str("GBP/USD").unwrap(),
+            Num::from_str("1.31").unwrap(),
+        );
+
+        let order_id = broker
+            .place_order(OrderRequest {
+                asset_pair: AssetPair::from_str("GBP/USD").unwrap(),
+                amount: Amount::Quantity {
+                    quantity: Num::from(10),
+                },
+            })
+            .unwrap();
+
+        let order = broker.get_order(&order_id).unwrap();
+        assert_eq!(order.order_id, order_id);
+    }
 }
