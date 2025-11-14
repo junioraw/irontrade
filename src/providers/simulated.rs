@@ -39,25 +39,8 @@ pub struct SimulatedIronTradeClient {
 
 impl IronTradeClient for SimulatedIronTradeClient {
     async fn buy_market(&mut self, req: BuyMarketRequest) -> Result<BuyMarketResponse> {
-        let from_asset: String;
-        let to_asset: String;
-
-        if req.asset_symbol.contains("/") {
-            let mut assets = req.asset_symbol.split("/");
-            to_asset = assets.next().unwrap().to_string();
-            from_asset = assets.next().unwrap().to_string();
-        } else {
-            from_asset = "USD".into();
-            to_asset = req.asset_symbol.to_string();
-        }
-
-        let asset_pair = AssetPair {
-            asset_on_sale: from_asset,
-            asset_being_bought: to_asset,
-        };
-
         let quantity_to_buy: Num;
-        let max_price: Num = self.broker.get_exchange_rate(&asset_pair).unwrap();
+        let max_price: Num = self.broker.get_exchange_rate(&req.asset_pair)?;
 
         match req.amount {
             Amount::Quantity { quantity } => {
@@ -69,7 +52,7 @@ impl IronTradeClient for SimulatedIronTradeClient {
         }
 
         let order_id = self.broker.place_order(OrderRequest {
-            asset_pair,
+            asset_pair: req.asset_pair,
             amount: Amount::Quantity {
                 quantity: quantity_to_buy,
             },

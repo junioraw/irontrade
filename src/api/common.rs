@@ -28,7 +28,7 @@ impl AssetPair {
 impl FromStr for AssetPair {
     type Err = ParseError;
 
-    fn from_str(s: &str) -> std::result::Result<Self, Self::Err> {
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
         let tokens: Vec<&str> = s.split("/").collect();
         Ok(AssetPair {
             asset_on_sale: tokens[1].into(),

@@ -49,7 +49,7 @@ impl IronTradeClient for AlpacaIronTradeClient {
             time_in_force: TimeInForce::UntilCanceled,
             ..Default::default()
         }
-        .init(req.asset_symbol, Side::Buy, req.amount.into());
+        .init(req.asset_pair.to_string(), Side::Buy, req.amount.into());
 
         let order = self.apca_client.issue::<order::Create>(&request).await?;
 
@@ -63,7 +63,7 @@ impl IronTradeClient for AlpacaIronTradeClient {
             type_: Type::Market,
             ..Default::default()
         }
-        .init(req.asset_symbol, Side::Sell, req.amount.into());
+        .init(req.asset_pair.to_string(), Side::Sell, req.amount.into());
 
         let order = self.apca_client.issue::<order::Create>(&request).await?;
 
@@ -102,10 +102,11 @@ impl IronTradeClient for AlpacaIronTradeClient {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::api::common::Amount;
+    use crate::api::common::{Amount, AssetPair};
     use crate::api::response::OrderStatus;
     use apca::ApiInfo;
     use num_decimal::Num;
+    use std::str::FromStr;
     use std::time::Duration;
     use tokio::time::sleep;
 
@@ -114,7 +115,7 @@ mod tests {
         let mut client = create_client();
         let order_id = client
             .buy_market(BuyMarketRequest {
-                asset_symbol: "BTC/USD".into(),
+                asset_pair: AssetPair::from_str("BTC/USD").unwrap(),
                 amount: Amount::Notional {
                     notional: Num::from(20),
                 },
@@ -133,7 +134,7 @@ mod tests {
 
         let buy_order_id = client
             .buy_market(BuyMarketRequest {
-                asset_symbol: "AAVE/USD".into(),
+                asset_pair: AssetPair::from_str("AAVE/USD").unwrap(),
                 amount: Amount::Notional {
                     notional: Num::from(20),
                 },
@@ -156,7 +157,7 @@ mod tests {
 
         let order_id = client
             .sell_market(SellMarketRequest {
-                asset_symbol: "AAVE/USD".into(),
+                asset_pair: AssetPair::from_str("AAVE/USD").unwrap(),
                 amount: Amount::Notional {
                     notional: Num::from(10),
                 },
@@ -175,7 +176,7 @@ mod tests {
 
         client
             .buy_market(BuyMarketRequest {
-                asset_symbol: "BTC/USD".into(),
+                asset_pair: AssetPair::from_str("BTC/USD").unwrap(),
                 amount: Amount::Notional {
                     notional: Num::from(20),
                 },
