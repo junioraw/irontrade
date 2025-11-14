@@ -7,7 +7,7 @@ use crate::api::response::{
     BuyMarketResponse, GetOpenPositionResponse, GetOrdersResponse, SellMarketResponse,
 };
 use crate::provider::IronTradeClientProvider;
-use crate::providers::simulated::broker::{OrderRequest, SimulatedBroker};
+use crate::providers::simulated::broker::SimulatedBroker;
 use anyhow::Result;
 use num_decimal::Num;
 use std::collections::HashMap;
@@ -39,25 +39,7 @@ pub struct SimulatedIronTradeClient {
 
 impl IronTradeClient for SimulatedIronTradeClient {
     async fn buy_market(&mut self, req: MarketOrderRequest) -> Result<BuyMarketResponse> {
-        let quantity_to_buy: Num;
-        let max_price: Num = self.broker.get_exchange_rate(&req.asset_pair)?;
-
-        match req.amount {
-            Amount::Quantity { quantity } => {
-                quantity_to_buy = quantity;
-            }
-            Amount::Notional { notional } => {
-                quantity_to_buy = notional * &max_price;
-            }
-        }
-
-        let order_id = self.broker.place_order(OrderRequest {
-            asset_pair: req.asset_pair,
-            amount: Amount::Quantity {
-                quantity: quantity_to_buy,
-            },
-        })?;
-
+        let order_id = self.broker.place_order(req)?;
         Ok(BuyMarketResponse { order_id })
     }
 

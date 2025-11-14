@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 use crate::api::common::{Amount, AssetPair};
-use anyhow::{Result, format_err};
+use crate::api::request::MarketOrderRequest;
+use anyhow::{format_err, Result};
 use num_decimal::Num;
 use std::collections::HashMap;
-use std::fmt::{Display, Formatter};
+use std::fmt::Display;
 use std::str::FromStr;
-use std::string::ParseError;
 use uuid::Uuid;
 
 pub struct SimulatedBroker {
@@ -26,8 +26,7 @@ impl SimulatedBroker {
 
     // Only supports market orders,
     // in this case they execute immediately since the exchange rate is determined in this method
-    // TODO: Add support for limit orders
-    pub fn place_order(&mut self, order_req: OrderRequest) -> Result<String> {
+    pub fn place_order(&mut self, order_req: MarketOrderRequest) -> Result<String> {
         let exchange_rate = &self.get_exchange_rate(&order_req.asset_pair)?;
 
         let quantity: &Num = match &order_req.amount {
@@ -107,11 +106,6 @@ impl SimulatedBroker {
     }
 }
 
-pub struct OrderRequest {
-    pub asset_pair: AssetPair,
-    pub amount: Amount,
-}
-
 #[derive(Hash, PartialEq, Eq, Clone, Debug)]
 pub struct Order {
     pub order_id: String,
@@ -130,9 +124,9 @@ pub struct FilledAmount {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::api::common::AssetPair;
     use std::collections::HashMap;
     use std::str::FromStr;
-    use crate::api::common::AssetPair;
 
     #[test]
     fn place_order_invalid_asset_pair() {
@@ -141,7 +135,7 @@ mod tests {
         let mut broker = SimulatedBroker::new(balances);
 
         let err = broker
-            .place_order(OrderRequest {
+            .place_order(MarketOrderRequest {
                 asset_pair: AssetPair::from_str("AAPL/USD").unwrap(),
                 amount: Amount::Quantity {
                     quantity: Num::from(10),
@@ -161,7 +155,7 @@ mod tests {
         );
 
         let err = broker
-            .place_order(OrderRequest {
+            .place_order(MarketOrderRequest {
                 asset_pair: AssetPair::from_str("GBP/USD").unwrap(),
                 amount: Amount::Quantity {
                     quantity: Num::from(10),
@@ -174,7 +168,7 @@ mod tests {
         broker.update_balance("USD", Num::from_str("13.09").unwrap());
 
         let err = broker
-            .place_order(OrderRequest {
+            .place_order(MarketOrderRequest {
                 asset_pair: AssetPair::from_str("GBP/USD").unwrap(),
                 amount: Amount::Quantity {
                     quantity: Num::from(10),
@@ -196,7 +190,7 @@ mod tests {
         );
 
         broker
-            .place_order(OrderRequest {
+            .place_order(MarketOrderRequest {
                 asset_pair: AssetPair::from_str("GBP/USD").unwrap(),
                 amount: Amount::Quantity {
                     quantity: Num::from(10),
@@ -219,7 +213,7 @@ mod tests {
         );
 
         broker
-            .place_order(OrderRequest {
+            .place_order(MarketOrderRequest {
                 asset_pair: AssetPair::from_str("GBP/USD").unwrap(),
                 amount: Amount::Quantity {
                     quantity: Num::from(10),
@@ -245,7 +239,7 @@ mod tests {
         );
 
         let order_id = broker
-            .place_order(OrderRequest {
+            .place_order(MarketOrderRequest {
                 asset_pair: AssetPair::from_str("GBP/USD").unwrap(),
                 amount: Amount::Quantity {
                     quantity: Num::from(10),
@@ -268,7 +262,7 @@ mod tests {
         );
 
         let order_id = broker
-            .place_order(OrderRequest {
+            .place_order(MarketOrderRequest {
                 asset_pair: AssetPair::from_str("GBP/USD").unwrap(),
                 amount: Amount::Quantity {
                     quantity: Num::from(10),
@@ -301,7 +295,7 @@ mod tests {
         );
 
         let order_id = broker
-            .place_order(OrderRequest {
+            .place_order(MarketOrderRequest {
                 asset_pair: AssetPair::from_str("GBP/USD").unwrap(),
                 amount: Amount::Notional {
                     notional: Num::from_str("6.55").unwrap(),
