@@ -2,7 +2,7 @@
 
 use crate::api::common::{Amount, AssetPair};
 use crate::api::request::MarketOrderRequest;
-use anyhow::{Result, format_err};
+use anyhow::{format_err, Result};
 use num_decimal::Num;
 use std::collections::HashMap;
 use uuid::Uuid;
@@ -39,18 +39,38 @@ impl SimulatedBroker {
             Amount::Notional { notional } => notional,
         };
 
-        let asset_on_sale = &order_req.asset_pair.notional_asset;
-        let balance = &self.get_balance(asset_on_sale);
+        let notional_asset = &order_req.asset_pair.notional_asset;
+        let quantity_asset = &order_req.asset_pair.quantity_asset;
 
-        if balance < notional {
+        let balance_err_asset;
+
+        if notional >= &Num::from(0) {
+            // buy order
+            let balance = &self.get_balance(notional_asset);
+            if balance < notional {
+                balance_err_asset = Some(notional_asset);
+            } else {
+                balance_err_asset = None;
+            }
+        } else {
+            // sell order
+            let balance = self.get_balance(quantity_asset);
+            if balance < -quantity {
+                balance_err_asset = Some(quantity_asset);
+            } else {
+                balance_err_asset = None;
+            }
+        }
+
+        if let Some(balance_err_asset) = balance_err_asset {
             return Err(format_err!(
                 "Not enough {} balance to place the order",
-                asset_on_sale
+                balance_err_asset
             ));
         }
 
-        self.update_balance(asset_on_sale, -notional);
-        self.update_balance(&order_req.asset_pair.quantity_asset, quantity.clone());
+        self.update_balance(notional_asset, -notional);
+        self.update_balance(quantity_asset, quantity.clone());
 
         let order_id = Uuid::new_v4().to_string();
 

@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 use crate::api::client::IronTradeClient;
+use crate::api::common::Amount;
 use crate::api::request::MarketOrderRequest;
 use crate::api::response::{
     BuyMarketResponse, GetOpenPositionResponse, GetOrdersResponse, SellMarketResponse,
@@ -43,7 +44,19 @@ impl IronTradeClient for SimulatedIronTradeClient {
     }
 
     async fn sell_market(&mut self, req: MarketOrderRequest) -> Result<SellMarketResponse> {
-        todo!()
+        let req = MarketOrderRequest {
+            asset_pair: req.asset_pair,
+            amount: match req.amount {
+                Amount::Quantity { quantity } => Amount::Quantity {
+                    quantity: -quantity,
+                },
+                Amount::Notional { notional } => Amount::Notional {
+                    notional: -notional,
+                },
+            },
+        };
+        let order_id = self.broker.place_order(req)?;
+        Ok(SellMarketResponse { order_id })
     }
 
     async fn get_orders(&self) -> Result<GetOrdersResponse> {
