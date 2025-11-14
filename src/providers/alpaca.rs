@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 use crate::api::client::IronTradeClient;
-use crate::api::request::{BuyMarketRequest, SellMarketRequest};
+use crate::api::request::MarketOrderRequest;
 use crate::api::response::{
     BuyMarketResponse, GetOpenPositionResponse, GetOrdersResponse, Order, SellMarketResponse,
 };
@@ -43,7 +43,7 @@ impl AlpacaIronTradeClient {
 }
 
 impl IronTradeClient for AlpacaIronTradeClient {
-    async fn buy_market(&mut self, req: BuyMarketRequest) -> Result<BuyMarketResponse> {
+    async fn buy_market(&mut self, req: MarketOrderRequest) -> Result<BuyMarketResponse> {
         let request = order::CreateReqInit {
             type_: Type::Market,
             time_in_force: TimeInForce::UntilCanceled,
@@ -58,7 +58,7 @@ impl IronTradeClient for AlpacaIronTradeClient {
         })
     }
 
-    async fn sell_market(&mut self, req: SellMarketRequest) -> Result<SellMarketResponse> {
+    async fn sell_market(&mut self, req: MarketOrderRequest) -> Result<SellMarketResponse> {
         let request = order::CreateReqInit {
             type_: Type::Market,
             ..Default::default()
@@ -114,7 +114,7 @@ mod tests {
     async fn buy_market_returns_order_id() {
         let mut client = create_client();
         let order_id = client
-            .buy_market(BuyMarketRequest {
+            .buy_market(MarketOrderRequest {
                 asset_pair: AssetPair::from_str("BTC/USD").unwrap(),
                 amount: Amount::Notional {
                     notional: Num::from(20),
@@ -133,7 +133,7 @@ mod tests {
         let mut client = create_client();
 
         let buy_order_id = client
-            .buy_market(BuyMarketRequest {
+            .buy_market(MarketOrderRequest {
                 asset_pair: AssetPair::from_str("AAVE/USD").unwrap(),
                 amount: Amount::Notional {
                     notional: Num::from(20),
@@ -156,7 +156,7 @@ mod tests {
         }
 
         let order_id = client
-            .sell_market(SellMarketRequest {
+            .sell_market(MarketOrderRequest {
                 asset_pair: AssetPair::from_str("AAVE/USD").unwrap(),
                 amount: Amount::Notional {
                     notional: Num::from(10),
@@ -175,7 +175,7 @@ mod tests {
         let pre_existing_orders = client.get_orders().await.unwrap().orders;
 
         client
-            .buy_market(BuyMarketRequest {
+            .buy_market(MarketOrderRequest {
                 asset_pair: AssetPair::from_str("BTC/USD").unwrap(),
                 amount: Amount::Notional {
                     notional: Num::from(20),

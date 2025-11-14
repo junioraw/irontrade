@@ -2,12 +2,7 @@
 
 use crate::api::common::{Amount, AssetPair};
 
-pub struct BuyMarketRequest {
-    pub asset_pair: AssetPair,
-    pub amount: Amount,
-}
-
-pub struct SellMarketRequest {
+pub struct MarketOrderRequest {
     pub asset_pair: AssetPair,
     pub amount: Amount,
 }
