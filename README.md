@@ -12,7 +12,7 @@ For live and paper trading it currently supports Alpaca through [apca](https://g
 
 For testing, it has a simulated trading client provider, which can rely on a remote or local backend.
 
-Example
+Usage
 ----
 
 The following example creates a simulated trading client with an initial balance of 1000 USD. It then places an order to buy AAPL worth of 100 USD.
@@ -23,8 +23,8 @@ The following example creates a simulated trading client with an initial balance
     let mut client = provider.create_client().unwrap();
 
     let order_id = client
-        .buy_market(BuyMarketRequest{
-            asset_symbol: "AAPL".into(),
+        .buy_market(MarketOrderRequest{
+            asset_pair: AssetPair::from_str("AAPL/USD").unwrap(),
             amount: Amount::Notional {
                 notional: Num::from(100)
             }
