@@ -5,6 +5,8 @@ use anyhow::{Result, format_err};
 use num_decimal::Num;
 use std::collections::HashMap;
 use std::fmt::{Display, Formatter};
+use std::str::FromStr;
+use std::string::ParseError;
 use uuid::Uuid;
 
 pub struct SimulatedBroker {
@@ -22,18 +24,19 @@ impl SimulatedBroker {
         }
     }
 
-    // Only supports market orders, in this case they execute immediately since the exchange rate is determined in this method
+    // Only supports market orders,
+    // in this case they execute immediately since the exchange rate is determined in this method
     // TODO: Add support for limit orders
     pub fn place_order(&mut self, order_req: OrderRequest) -> Result<String> {
         let exchange_rate = &self.get_exchange_rate(&order_req.asset_pair)?;
 
         let quantity: &Num = match &order_req.amount {
             Amount::Quantity { quantity } => quantity,
-            Amount::Notional { notional } => &(notional * exchange_rate),
+            Amount::Notional { notional } => &(notional / exchange_rate),
         };
 
         let notional: &Num = match &order_req.amount {
-            Amount::Quantity { quantity } => &(quantity / exchange_rate),
+            Amount::Quantity { quantity } => &(quantity * exchange_rate),
             Amount::Notional { notional } => notional,
         };
 
@@ -92,14 +95,13 @@ impl SimulatedBroker {
         self.exchange_rates.insert(asset_pair, rate);
     }
 
-    fn update_balance(&mut self, asset: &String, delta: Num) {
+    fn update_balance(&mut self, asset: &str, delta: Num) {
         let previous_balance = self
             .balances
             .get(asset)
             .map(Num::clone)
             .unwrap_or(Num::from(0));
-        self.balances
-            .insert(asset.clone(), previous_balance + delta);
+        self.balances.insert(asset.into(), previous_balance + delta);
     }
 }
 
@@ -127,11 +129,80 @@ pub struct AssetPair {
     pub asset_being_bought: String,
 }
 
+impl FromStr for AssetPair {
+    type Err = ParseError;
+
+    fn from_str(s: &str) -> std::result::Result<Self, Self::Err> {
+        let tokens: Vec<&str> = s.split("/").collect();
+        Ok(AssetPair {
+            asset_on_sale: tokens[1].into(),
+            asset_being_bought: tokens[0].into(),
+        })
+    }
+}
 impl Display for AssetPair {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         f.write_fmt(format_args!(
             "{}/{}",
             self.asset_being_bought, self.asset_on_sale
         ))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::collections::HashMap;
+    use std::str::FromStr;
+
+    #[test]
+    fn place_order_invalid_asset_pair() {
+        let mut balances = HashMap::new();
+        balances.insert("USD".into(), Num::from(1000));
+        let mut broker = SimulatedBroker::new(balances);
+
+        let err = broker
+            .place_order(OrderRequest {
+                asset_pair: AssetPair::from_str("AAPL/USD").unwrap(),
+                amount: Amount::Quantity {
+                    quantity: Num::from(10),
+                },
+            })
+            .unwrap_err();
+
+        assert_eq!(err.to_string(), "Asset pair AAPL/USD can't be traded");
+    }
+
+    #[test]
+    fn place_order_no_balance() {
+        let mut broker = SimulatedBroker::new(HashMap::new());
+        broker.set_exchange_rate(
+            AssetPair::from_str("GBP/USD").unwrap(),
+            Num::from_str("1.31").unwrap(),
+        );
+
+        let err = broker
+            .place_order(OrderRequest {
+                asset_pair: AssetPair::from_str("GBP/USD").unwrap(),
+                amount: Amount::Quantity {
+                    quantity: Num::from(10),
+                },
+            })
+            .unwrap_err();
+
+        assert_eq!(err.to_string(), "Not enough USD balance to place the order");
+
+        broker.update_balance("USD", Num::from_str("13.09").unwrap());
+
+        let err = broker
+            .place_order(OrderRequest {
+                asset_pair: AssetPair::from_str("GBP/USD").unwrap(),
+                amount: Amount::Quantity {
+                    quantity: Num::from(10),
+                },
+            })
+            .unwrap_err();
+
+        assert_eq!(err.to_string(), "Not enough USD balance to place the order");
     }
 }
