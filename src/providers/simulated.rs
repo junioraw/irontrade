@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 use crate::api::client::IronTradeClient;
-use crate::api::common::Amount;
 use crate::api::request::MarketOrderRequest;
 use crate::api::response::{
     BuyMarketResponse, GetOpenPositionResponse, GetOrdersResponse, SellMarketResponse,
@@ -28,7 +27,7 @@ impl IronTradeClientProvider<SimulatedIronTradeClient> for SimulatedIronTradeCli
     fn create_client(&self) -> Result<SimulatedIronTradeClient> {
         let mut balances = HashMap::new();
         balances.insert("USD".into(), self.usd_balance.clone());
-        let broker = SimulatedBroker::new(balances);
+        let broker = SimulatedBroker::new("USD".into(), balances);
         Ok(SimulatedIronTradeClient { broker })
     }
 }

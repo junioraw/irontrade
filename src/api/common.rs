@@ -12,17 +12,8 @@ pub enum Amount {
 
 #[derive(Hash, PartialEq, Eq, Clone, Debug)]
 pub struct AssetPair {
-    pub asset_on_sale: String,
-    pub asset_being_bought: String,
-}
-
-impl AssetPair {
-    pub fn inverse(&self) -> AssetPair {
-        AssetPair {
-            asset_on_sale: self.asset_being_bought.clone(),
-            asset_being_bought: self.asset_on_sale.clone(),
-        }
-    }
+    pub notional_asset: String,
+    pub quantity_asset: String,
 }
 
 impl FromStr for AssetPair {
@@ -31,8 +22,8 @@ impl FromStr for AssetPair {
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         let tokens: Vec<&str> = s.split("/").collect();
         Ok(AssetPair {
-            asset_on_sale: tokens[1].into(),
-            asset_being_bought: tokens[0].into(),
+            notional_asset: tokens[1].into(),
+            quantity_asset: tokens[0].into(),
         })
     }
 }
@@ -40,7 +31,7 @@ impl Display for AssetPair {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         f.write_fmt(format_args!(
             "{}/{}",
-            self.asset_being_bought, self.asset_on_sale
+            self.quantity_asset, self.notional_asset
         ))
     }
 }
