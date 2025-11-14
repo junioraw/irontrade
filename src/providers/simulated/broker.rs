@@ -110,20 +110,20 @@ pub struct OrderRequest {
     pub amount: Amount,
 }
 
-#[derive(Hash, PartialEq, Eq, Clone)]
+#[derive(Hash, PartialEq, Eq, Clone, Debug)]
 pub struct Order {
     pub order_id: String,
     pub asset_pair: AssetPair,
     pub filled_amount: FilledAmount,
 }
 
-#[derive(Hash, PartialEq, Eq, Clone)]
+#[derive(Hash, PartialEq, Eq, Clone, Debug)]
 pub struct FilledAmount {
     pub quantity: Num,
     pub notional: Num,
 }
 
-#[derive(Hash, PartialEq, Eq, Clone)]
+#[derive(Hash, PartialEq, Eq, Clone, Debug)]
 pub struct AssetPair {
     pub asset_on_sale: String,
     pub asset_being_bought: String,
@@ -250,5 +250,65 @@ mod tests {
 
         let order = broker.get_order(&order_id).unwrap();
         assert_eq!(order.order_id, order_id);
+    }
+
+    #[test]
+    fn get_order_based_on_quantity_place_order() {
+        let mut balances = HashMap::new();
+        balances.insert("USD".into(), Num::from_str("14.1").unwrap());
+        let mut broker = SimulatedBroker::new(balances);
+        broker.set_exchange_rate(
+            AssetPair::from_str("GBP/USD").unwrap(),
+            Num::from_str("1.31").unwrap(),
+        );
+
+        let order_id = broker
+            .place_order(OrderRequest {
+                asset_pair: AssetPair::from_str("GBP/USD").unwrap(),
+                amount: Amount::Quantity {
+                    quantity: Num::from(10),
+                },
+            })
+            .unwrap();
+
+        let order = broker.get_order(&order_id).unwrap();
+        assert_eq!(order, Order {
+            order_id,
+            asset_pair: AssetPair::from_str("GBP/USD").unwrap(),
+            filled_amount: FilledAmount {
+                quantity: Num::from(10),
+                notional: Num::from_str("13.1").unwrap()
+            }
+        });
+    }
+
+    #[test]
+    fn get_order_based_on_notional_place_order() {
+        let mut balances = HashMap::new();
+        balances.insert("USD".into(), Num::from_str("14.1").unwrap());
+        let mut broker = SimulatedBroker::new(balances);
+        broker.set_exchange_rate(
+            AssetPair::from_str("GBP/USD").unwrap(),
+            Num::from_str("1.31").unwrap(),
+        );
+
+        let order_id = broker
+            .place_order(OrderRequest {
+                asset_pair: AssetPair::from_str("GBP/USD").unwrap(),
+                amount: Amount::Notional {
+                    notional: Num::from_str("6.55").unwrap(),
+                },
+            })
+            .unwrap();
+
+        let order = broker.get_order(&order_id).unwrap();
+        assert_eq!(order, Order {
+            order_id,
+            asset_pair: AssetPair::from_str("GBP/USD").unwrap(),
+            filled_amount: FilledAmount {
+                quantity: Num::from(5),
+                notional: Num::from_str("6.55").unwrap()
+            }
+        });
     }
 }
