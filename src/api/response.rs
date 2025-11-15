@@ -15,6 +15,10 @@ pub struct GetOrdersResponse {
     pub orders: Vec<Order>,
 }
 
+pub struct GetCashResponse {
+    pub cash: Num,
+}
+
 pub struct GetOpenPositionResponse {
     pub open_position: OpenPosition,
 }

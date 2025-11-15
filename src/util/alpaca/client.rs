@@ -1,12 +1,16 @@
-use apca::{ApiInfo, Client};
-use apca::api::v2::{order, orders, position};
-use apca::api::v2::asset::Symbol;
-use apca::api::v2::order::{Side, TimeInForce, Type};
-use apca::api::v2::orders::ListReq;
 use crate::api::client::IronTradeClient;
 use crate::api::provider::IronTradeClientBuilder;
 use crate::api::request::MarketOrderRequest;
-use crate::api::response::{BuyMarketResponse, GetOpenPositionResponse, GetOrdersResponse, Order, SellMarketResponse};
+use crate::api::response::{
+    BuyMarketResponse, GetCashResponse, GetOpenPositionResponse, GetOrdersResponse, Order,
+    SellMarketResponse,
+};
+use anyhow::Result;
+use apca::api::v2::asset::Symbol;
+use apca::api::v2::order::{Side, TimeInForce, Type};
+use apca::api::v2::orders::ListReq;
+use apca::api::v2::{order, orders, position};
+use apca::{ApiInfo, Client};
 
 pub struct AlpacaClient {
     apca_client: Client,
@@ -31,19 +35,19 @@ impl AlpacaClientBuilder {
 }
 
 impl IronTradeClientBuilder<AlpacaClient> for AlpacaClientBuilder {
-    fn build(self) -> anyhow::Result<AlpacaClient> {
+    fn build(self) -> Result<AlpacaClient> {
         Ok(AlpacaClient::new(self.api_info))
     }
 }
 
 impl IronTradeClient for AlpacaClient {
-    async fn buy_market(&mut self, req: MarketOrderRequest) -> anyhow::Result<BuyMarketResponse> {
+    async fn buy_market(&mut self, req: MarketOrderRequest) -> Result<BuyMarketResponse> {
         let request = order::CreateReqInit {
             type_: Type::Market,
             time_in_force: TimeInForce::UntilCanceled,
             ..Default::default()
         }
-            .init(req.asset_pair.to_string(), Side::Buy, req.amount.into());
+        .init(req.asset_pair.to_string(), Side::Buy, req.amount.into());
 
         let order = self.apca_client.issue::<order::Create>(&request).await?;
 
@@ -52,12 +56,12 @@ impl IronTradeClient for AlpacaClient {
         })
     }
 
-    async fn sell_market(&mut self, req: MarketOrderRequest) -> anyhow::Result<SellMarketResponse> {
+    async fn sell_market(&mut self, req: MarketOrderRequest) -> Result<SellMarketResponse> {
         let request = order::CreateReqInit {
             type_: Type::Market,
             ..Default::default()
         }
-            .init(req.asset_pair.to_string(), Side::Sell, req.amount.into());
+        .init(req.asset_pair.to_string(), Side::Sell, req.amount.into());
 
         let order = self.apca_client.issue::<order::Create>(&request).await?;
 
@@ -66,7 +70,7 @@ impl IronTradeClient for AlpacaClient {
         })
     }
 
-    async fn get_orders(&self) -> anyhow::Result<GetOrdersResponse> {
+    async fn get_orders(&self) -> Result<GetOrdersResponse> {
         let orders: Vec<Order> = self
             .apca_client
             .issue::<orders::List>(&ListReq {
@@ -80,7 +84,11 @@ impl IronTradeClient for AlpacaClient {
         Ok(GetOrdersResponse { orders })
     }
 
-    async fn get_open_position(&self, asset_symbol: String) -> anyhow::Result<GetOpenPositionResponse> {
+    async fn get_cash(&self) -> Result<GetCashResponse> {
+        todo!()
+    }
+
+    async fn get_open_position(&self, asset_symbol: String) -> Result<GetOpenPositionResponse> {
         let position = self
             .apca_client
             .issue::<position::Get>(&Symbol::Sym(asset_symbol))
@@ -99,12 +107,12 @@ mod tests {
     use crate::api::common::{Amount, AssetPair};
     use crate::api::provider::IronTradeClientProvider;
     use crate::api::response::OrderStatus;
+    use crate::util::alpaca::AlpacaProvider;
     use apca::ApiInfo;
     use num_decimal::Num;
     use std::str::FromStr;
     use std::time::Duration;
     use tokio::time::sleep;
-    use crate::util::alpaca::AlpacaProvider;
 
     #[tokio::test]
     async fn buy_market_returns_order_id() {
