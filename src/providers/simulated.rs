@@ -7,7 +7,7 @@ use crate::api::response::{
     BuyMarketResponse, GetOpenPositionResponse, GetOrdersResponse, SellMarketResponse,
 };
 use crate::provider::IronTradeClientProvider;
-use crate::providers::simulated::broker::SimulatedBroker;
+use crate::providers::simulated::broker::{SimulatedBroker, SimulatedBrokerBuilder};
 use anyhow::Result;
 use num_decimal::Num;
 use std::collections::HashMap;
@@ -26,9 +26,7 @@ impl SimulatedIronTradeClientProvider {
 
 impl IronTradeClientProvider<SimulatedIronTradeClient> for SimulatedIronTradeClientProvider {
     fn create_client(&self) -> Result<SimulatedIronTradeClient> {
-        let mut balances = HashMap::new();
-        balances.insert("USD".into(), self.usd_balance.clone());
-        let broker = SimulatedBroker::new("USD".into(), balances);
+        let broker = SimulatedBrokerBuilder::new("USD").build();
         Ok(SimulatedIronTradeClient { broker })
     }
 }
