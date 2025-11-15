@@ -195,6 +195,11 @@ mod tests {
     }
 
     fn create_client() -> AlpacaClient {
+        let api_info = ApiInfo::from_env().unwrap();
+        assert!(
+            api_info.api_base_url.to_string().contains("paper"),
+            "Use a paper account for unit testing"
+        );
         AlpacaProvider::new()
             .create_client(AlpacaClientBuilder::new(ApiInfo::from_env().unwrap()))
             .unwrap()
