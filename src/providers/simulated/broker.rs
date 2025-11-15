@@ -8,7 +8,9 @@ use num_decimal::Num;
 use std::collections::{HashMap, HashSet};
 use uuid::Uuid;
 
+#[derive(Debug)]
 pub struct SimulatedBroker {
+    currency: String,
     notional_assets: HashSet<String>,
     orders: HashMap<String, FilledOrder>,
     exchange_rates: HashMap<AssetPair, Num>,
@@ -16,22 +18,27 @@ pub struct SimulatedBroker {
 }
 
 impl SimulatedBroker {
-    pub fn new_single_notional(
-        notional_asset: String,
-        starting_balances: HashMap<String, Num>,
-    ) -> Self {
+    pub fn new(currency: String, starting_balances: HashMap<String, Num>) -> Self {
         let mut notional_assets = HashSet::new();
-        notional_assets.insert(notional_asset.clone());
-        Self::new(notional_assets, starting_balances)
+        notional_assets.insert(currency.clone());
+        Self::new_multiple_notional(currency, notional_assets, starting_balances).unwrap()
     }
 
-    pub fn new(notional_assets: HashSet<String>, starting_balances: HashMap<String, Num>) -> Self {
-        Self {
+    pub fn new_multiple_notional(
+        currency: String,
+        notional_assets: HashSet<String>,
+        starting_balances: HashMap<String, Num>,
+    ) -> Result<Self> {
+        if !notional_assets.contains(&currency) {
+            return Err(format_err!("Missing currency notional asset {}", currency));
+        }
+        Ok(Self {
+            currency,
             notional_assets,
             orders: HashMap::new(),
             exchange_rates: HashMap::new(),
             balances: starting_balances.clone(),
-        }
+        })
     }
 
     // Only supports market orders,
@@ -191,7 +198,7 @@ mod tests {
     fn place_order_invalid_asset_pair() {
         let mut balances = HashMap::new();
         balances.insert("USD".into(), Num::from(1000));
-        let mut broker = SimulatedBroker::new_single_notional("USD".into(), balances);
+        let mut broker = SimulatedBroker::new("USD".into(), balances);
 
         let err = broker
             .place_order(MarketOrderRequest {
@@ -207,7 +214,7 @@ mod tests {
 
     #[test]
     fn place_order_no_balance() {
-        let mut broker = SimulatedBroker::new_single_notional("USD".into(), HashMap::new());
+        let mut broker = SimulatedBroker::new("USD".into(), HashMap::new());
         let _ = broker.set_exchange_rate(
             AssetPair::from_str("GBP/USD").unwrap(),
             Num::from_str("1.31").unwrap(),
@@ -242,7 +249,7 @@ mod tests {
     fn place_order_updates_balances() {
         let mut balances = HashMap::new();
         balances.insert("USD".into(), Num::from_str("14.1").unwrap());
-        let mut broker = SimulatedBroker::new_single_notional("USD".into(), balances);
+        let mut broker = SimulatedBroker::new("USD".into(), balances);
         let _ = broker.set_exchange_rate(
             AssetPair::from_str("GBP/USD").unwrap(),
             Num::from_str("1.31").unwrap(),
@@ -265,7 +272,7 @@ mod tests {
     fn place_order_returns_valid_order_id() {
         let mut balances = HashMap::new();
         balances.insert("USD".into(), Num::from_str("14.1").unwrap());
-        let mut broker = SimulatedBroker::new_single_notional("USD".into(), balances);
+        let mut broker = SimulatedBroker::new("USD".into(), balances);
         broker
             .set_exchange_rate(
                 AssetPair::from_str("GBP/USD").unwrap(),
@@ -290,7 +297,7 @@ mod tests {
     fn get_order_based_on_quantity_place_order() {
         let mut balances = HashMap::new();
         balances.insert("USD".into(), Num::from_str("14.1").unwrap());
-        let mut broker = SimulatedBroker::new_single_notional("USD".into(), balances);
+        let mut broker = SimulatedBroker::new("USD".into(), balances);
         broker
             .set_exchange_rate(
                 AssetPair::from_str("GBP/USD").unwrap(),
@@ -325,7 +332,7 @@ mod tests {
     fn get_order_based_on_notional_place_order() {
         let mut balances = HashMap::new();
         balances.insert("USD".into(), Num::from_str("14.1").unwrap());
-        let mut broker = SimulatedBroker::new_single_notional("USD".into(), balances);
+        let mut broker = SimulatedBroker::new("USD".into(), balances);
         broker
             .set_exchange_rate(
                 AssetPair::from_str("GBP/USD").unwrap(),
@@ -360,7 +367,7 @@ mod tests {
     fn set_exchange_rate_invalid_notional_asset() {
         let mut balances = HashMap::new();
         balances.insert("USD".into(), Num::from_str("14.1").unwrap());
-        let mut broker = SimulatedBroker::new_single_notional("USD".into(), balances);
+        let mut broker = SimulatedBroker::new("USD".into(), balances);
 
         let err = broker
             .set_exchange_rate(
@@ -369,17 +376,14 @@ mod tests {
             )
             .unwrap_err();
 
-        assert_eq!(
-            err.to_string(),
-            "USDT is not a valid notional asset"
-        );
+        assert_eq!(err.to_string(), "USDT is not a valid notional asset");
     }
 
     #[test]
     fn set_exchange_rate_inverted_notional_asset() {
         let mut balances = HashMap::new();
         balances.insert("USD".into(), Num::from_str("14.1").unwrap());
-        let mut broker = SimulatedBroker::new_single_notional("USD".into(), balances);
+        let mut broker = SimulatedBroker::new("USD".into(), balances);
 
         let err = broker
             .set_exchange_rate(
@@ -388,9 +392,16 @@ mod tests {
             )
             .unwrap_err();
 
-        assert_eq!(
-            err.to_string(),
-            "GBP is not a valid notional asset"
-        );
+        assert_eq!(err.to_string(), "GBP is not a valid notional asset");
+    }
+
+    #[test]
+    fn new_multiple_notional_without_currency() {
+        let mut notional_assets = HashSet::new();
+        notional_assets.insert("BTC".into());
+        let err =
+            SimulatedBroker::new_multiple_notional("USD".into(), notional_assets, HashMap::new())
+                .unwrap_err();
+        assert_eq!(err.to_string(), "Missing currency notional asset USD");
     }
 }
