@@ -408,7 +408,7 @@ mod tests {
     }
 
     #[test]
-    fn set_exchange_rate_invalid_notional_asset() {
+    fn set_notional_per_unit_invalid_notional_asset() {
         let mut broker = SimulatedBrokerBuilder::new("USD")
             .set_balance(Num::from_str("14.1").unwrap())
             .build();
@@ -424,7 +424,7 @@ mod tests {
     }
 
     #[test]
-    fn set_exchange_rate_inverted_notional_asset() {
+    fn set_notional_per_unit_inverted_notional_asset() {
         let mut broker = SimulatedBrokerBuilder::new("USD")
             .set_balance(Num::from_str("14.1").unwrap())
             .build();
