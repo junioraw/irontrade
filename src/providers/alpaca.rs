@@ -14,27 +14,27 @@ use apca::api::v2::orders::ListReq;
 use apca::api::v2::{order, orders, position};
 use apca::{ApiInfo, Client};
 
-pub struct AlpacaIronTradeClientProvider {
+pub struct AlpacaClientProvider {
     api_info: ApiInfo,
 }
 
-impl AlpacaIronTradeClientProvider {
+impl AlpacaClientProvider {
     pub fn new(api_info: ApiInfo) -> Self {
         Self { api_info }
     }
 }
 
-impl IronTradeClientProvider<AlpacaIronTradeClient> for AlpacaIronTradeClientProvider {
-    fn create_client(&self) -> Result<AlpacaIronTradeClient> {
-        Ok(AlpacaIronTradeClient::new(self.api_info.clone()))
+impl IronTradeClientProvider<AlpacaClient> for AlpacaClientProvider {
+    fn create_client(&self) -> Result<AlpacaClient> {
+        Ok(AlpacaClient::new(self.api_info.clone()))
     }
 }
 
-pub struct AlpacaIronTradeClient {
+pub struct AlpacaClient {
     apca_client: Client,
 }
 
-impl AlpacaIronTradeClient {
+impl AlpacaClient {
     fn new(api_info: ApiInfo) -> Self {
         Self {
             apca_client: Client::new(api_info),
@@ -42,7 +42,7 @@ impl AlpacaIronTradeClient {
     }
 }
 
-impl IronTradeClient for AlpacaIronTradeClient {
+impl IronTradeClient for AlpacaClient {
     async fn buy_market(&mut self, req: MarketOrderRequest) -> Result<BuyMarketResponse> {
         let request = order::CreateReqInit {
             type_: Type::Market,
@@ -190,8 +190,8 @@ mod tests {
         assert!(orders.len() > pre_existing_orders.len())
     }
 
-    fn create_client() -> AlpacaIronTradeClient {
-        AlpacaIronTradeClientProvider::new(ApiInfo::from_env().unwrap())
+    fn create_client() -> AlpacaClient {
+        AlpacaClientProvider::new(ApiInfo::from_env().unwrap())
             .create_client()
             .unwrap()
     }

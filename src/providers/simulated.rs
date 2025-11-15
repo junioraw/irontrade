@@ -10,32 +10,31 @@ use crate::provider::IronTradeClientProvider;
 use crate::providers::simulated::broker::{SimulatedBroker, SimulatedBrokerBuilder};
 use anyhow::Result;
 use num_decimal::Num;
-use std::collections::HashMap;
 
 mod broker;
 
-pub struct SimulatedIronTradeClientProvider {
+pub struct SimulatedClientProvider {
     usd_balance: Num,
 }
 
-impl SimulatedIronTradeClientProvider {
+impl SimulatedClientProvider {
     pub fn new(usd_balance: Num) -> Self {
         Self { usd_balance }
     }
 }
 
-impl IronTradeClientProvider<SimulatedIronTradeClient> for SimulatedIronTradeClientProvider {
-    fn create_client(&self) -> Result<SimulatedIronTradeClient> {
+impl IronTradeClientProvider<SimulatedClient> for SimulatedClientProvider {
+    fn create_client(&self) -> Result<SimulatedClient> {
         let broker = SimulatedBrokerBuilder::new("USD").build();
-        Ok(SimulatedIronTradeClient { broker })
+        Ok(SimulatedClient { broker })
     }
 }
 
-pub struct SimulatedIronTradeClient {
+pub struct SimulatedClient {
     broker: SimulatedBroker,
 }
 
-impl IronTradeClient for SimulatedIronTradeClient {
+impl IronTradeClient for SimulatedClient {
     async fn buy_market(&mut self, req: MarketOrderRequest) -> Result<BuyMarketResponse> {
         let order_id = self.broker.place_order(req)?;
         Ok(BuyMarketResponse { order_id })
