@@ -9,7 +9,7 @@ use anyhow::Result;
 use apca::api::v2::asset::Symbol;
 use apca::api::v2::order::{Side, TimeInForce, Type};
 use apca::api::v2::orders::ListReq;
-use apca::api::v2::{order, orders, position};
+use apca::api::v2::{account, order, orders, position};
 use apca::{ApiInfo, Client};
 
 pub struct AlpacaClient {
@@ -85,7 +85,8 @@ impl IronTradeClient for AlpacaClient {
     }
 
     async fn get_cash(&self) -> Result<GetCashResponse> {
-        todo!()
+        let account = self.apca_client.issue::<account::Get>(&()).await?;
+        Ok(GetCashResponse { cash: account.cash })
     }
 
     async fn get_open_position(&self, asset_symbol: String) -> Result<GetOpenPositionResponse> {
@@ -192,6 +193,27 @@ mod tests {
         let orders = client.get_orders().await.unwrap().orders;
 
         assert!(orders.len() > pre_existing_orders.len())
+    }
+
+    #[tokio::test]
+    #[ignore] // Only run when it's guaranteed that the paper account has cash
+    async fn get_cash() {
+        let client = create_client();
+        let cash = client.get_cash().await.unwrap().cash;
+        assert!(cash > Num::from(0))
+    }
+
+    #[tokio::test]
+    #[ignore] // Only run when it's guaranteed that the paper account has an open position
+    // TODO: place an order instead and remove ignore macro once https://github.com/alpacahq/Alpaca-API/issues/278 is fixed
+    async fn get_open_position() {
+        let client = create_client();
+        let position = client
+            .get_open_position("AAVEUSD".into())
+            .await
+            .unwrap()
+            .open_position;
+        assert_eq!(position.asset_symbol, "AAVEUSD")
     }
 
     fn create_client() -> AlpacaClient {
