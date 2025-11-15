@@ -14,11 +14,12 @@ pub trait IronTradeClientBuilder<T: IronTradeClient> {
 pub mod simple {
     use crate::api::client::IronTradeClient;
     use crate::provider::{IronTradeClientBuilder, IronTradeClientProvider};
+    use anyhow::Result;
 
     pub struct SimpleProvider;
 
     impl<T: IronTradeClient> IronTradeClientProvider<T> for SimpleProvider {
-        fn create_client(&self, builder: impl IronTradeClientBuilder<T>) -> anyhow::Result<T> {
+        fn create_client(&self, builder: impl IronTradeClientBuilder<T>) -> Result<T> {
             builder.build()
         }
     }
