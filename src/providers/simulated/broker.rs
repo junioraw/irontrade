@@ -3,7 +3,7 @@
 use crate::api::common::{Amount, AssetPair};
 use crate::api::request::MarketOrderRequest;
 use crate::api::response::{Order, OrderStatus, OrderType};
-use anyhow::{Result, format_err};
+use anyhow::{format_err, Result};
 use num_decimal::Num;
 use std::collections::{HashMap, HashSet};
 use uuid::Uuid;
@@ -35,22 +35,22 @@ impl SimulatedBrokerBuilder {
         }
     }
 
-    pub fn set_balance(&mut self, balance: Num) -> &Self {
+    pub fn set_balance(&mut self, balance: Num) -> &mut Self {
         self.balances.insert(self.currency.clone(), balance);
         self
     }
 
-    pub fn add_notional_asset(&mut self, notional_asset: String, balance: Option<Num>) -> &Self {
-        self.notional_assets.insert(notional_asset.clone());
+    pub fn add_notional_asset(&mut self, notional_asset: &str, balance: Option<Num>) -> &mut Self {
+        self.notional_assets.insert(notional_asset.into());
         if let Some(balance) = balance {
-            self.balances.insert(notional_asset, balance);
+            self.balances.insert(notional_asset.into(), balance);
         }
         self
     }
 
     pub fn build(&self) -> SimulatedBroker {
         SimulatedBroker::new(
-            self.currency.clone(),
+            &self.currency,
             self.notional_assets.clone(),
             self.balances.clone(),
         )
@@ -60,15 +60,15 @@ impl SimulatedBrokerBuilder {
 
 impl SimulatedBroker {
     fn new(
-        currency: String,
+        currency: &str,
         notional_assets: HashSet<String>,
         starting_balances: HashMap<String, Num>,
     ) -> Result<Self> {
-        if !notional_assets.contains(&currency) {
+        if !notional_assets.contains(currency) {
             return Err(format_err!("Missing currency notional asset {}", currency));
         }
         Ok(Self {
-            currency,
+            currency: currency.into(),
             notional_assets,
             orders: HashMap::new(),
             exchange_rates: HashMap::new(),
@@ -152,7 +152,11 @@ impl SimulatedBroker {
             .ok_or(format_err!("Order with id {} doesn't exist", order_id))
     }
 
-    pub fn get_balance(&self, asset: &String) -> Num {
+    pub fn get_currency(&self) -> String {
+        self.currency.clone()
+    }
+
+    pub fn get_balance(&self, asset: &str) -> Num {
         self.balances
             .get(asset)
             .map(Num::clone)
@@ -249,9 +253,8 @@ mod tests {
 
     #[test]
     fn place_order_no_balance() {
-        let mut broker = SimulatedBrokerBuilder::new("USD")
-            .build();
-        
+        let mut broker = SimulatedBrokerBuilder::new("USD").build();
+
         let _ = broker.set_exchange_rate(
             AssetPair::from_str("GBP/USD").unwrap(),
             Num::from_str("1.31").unwrap(),
@@ -287,7 +290,7 @@ mod tests {
         let mut broker = SimulatedBrokerBuilder::new("USD")
             .set_balance(Num::from_str("14.1").unwrap())
             .build();
-        
+
         let _ = broker.set_exchange_rate(
             AssetPair::from_str("GBP/USD").unwrap(),
             Num::from_str("1.31").unwrap(),
@@ -302,8 +305,8 @@ mod tests {
             })
             .unwrap();
 
-        assert_eq!(broker.get_balance(&"USD".into()), Num::from(1));
-        assert_eq!(broker.get_balance(&"GBP".into()), Num::from(10));
+        assert_eq!(broker.get_balance("USD"), Num::from(1));
+        assert_eq!(broker.get_balance("GBP"), Num::from(10));
     }
 
     #[test]
@@ -311,7 +314,7 @@ mod tests {
         let mut broker = SimulatedBrokerBuilder::new("USD")
             .set_balance(Num::from_str("14.1").unwrap())
             .build();
-        
+
         broker
             .set_exchange_rate(
                 AssetPair::from_str("GBP/USD").unwrap(),
@@ -337,7 +340,7 @@ mod tests {
         let mut broker = SimulatedBrokerBuilder::new("USD")
             .set_balance(Num::from_str("14.1").unwrap())
             .build();
-        
+
         broker
             .set_exchange_rate(
                 AssetPair::from_str("GBP/USD").unwrap(),
@@ -373,7 +376,7 @@ mod tests {
         let mut broker = SimulatedBrokerBuilder::new("USD")
             .set_balance(Num::from_str("14.1").unwrap())
             .build();
-        
+
         broker
             .set_exchange_rate(
                 AssetPair::from_str("GBP/USD").unwrap(),
@@ -440,7 +443,38 @@ mod tests {
     fn new_without_currency() {
         let mut notional_assets = HashSet::new();
         notional_assets.insert("BTC".into());
-        let err = SimulatedBroker::new("USD".into(), notional_assets, HashMap::new()).unwrap_err();
+        let err = SimulatedBroker::new("USD", notional_assets, HashMap::new()).unwrap_err();
         assert_eq!(err.to_string(), "Missing currency notional asset USD");
+    }
+
+    #[test]
+    fn build_no_balance() {
+        let broker = SimulatedBrokerBuilder::new("USD").build();
+        assert_eq!(broker.get_balance("USD"), Num::from(0))
+    }
+
+    #[test]
+    fn build_negative_balance() {
+        let broker = SimulatedBrokerBuilder::new("USD")
+            .set_balance(Num::from(-10))
+            .build();
+        assert_eq!(broker.get_balance("USD"), Num::from(-10))
+    }
+
+    #[test]
+    fn build_with_notional_assets() {
+        let broker = SimulatedBrokerBuilder::new("USD")
+            .set_balance(Num::from_str("14.1").unwrap())
+            .add_notional_asset("BTC", None)
+            .add_notional_asset("USDT", Some(Num::from(-10)))
+            .build();
+
+        assert_eq!(
+            broker.get_balance(&broker.get_currency()),
+            Num::from_str("14.1").unwrap()
+        );
+        assert_eq!(broker.get_balance("USD"), Num::from_str("14.1").unwrap());
+        assert_eq!(broker.get_balance("USDT"), Num::from(-10));
+        assert_eq!(broker.get_balance("BTC"), Num::from(0));
     }
 }
