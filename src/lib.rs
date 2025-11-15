@@ -2,5 +2,5 @@
 
 pub mod api;
 pub mod provider;
-pub mod providers;
+pub mod clients;
 

@@ -5,7 +5,7 @@ use crate::api::request::MarketOrderRequest;
 use crate::api::response::{
     BuyMarketResponse, GetOpenPositionResponse, GetOrdersResponse, Order, SellMarketResponse,
 };
-use crate::provider::IronTradeClientProvider;
+use crate::provider::{IronTradeClientBuilder};
 use anyhow::Result;
 use apca::api::v2::asset::Symbol;
 use apca::api::v2::order::TimeInForce;
@@ -13,22 +13,6 @@ use apca::api::v2::order::{Side, Type};
 use apca::api::v2::orders::ListReq;
 use apca::api::v2::{order, orders, position};
 use apca::{ApiInfo, Client};
-
-pub struct AlpacaClientProvider {
-    api_info: ApiInfo,
-}
-
-impl AlpacaClientProvider {
-    pub fn new(api_info: ApiInfo) -> Self {
-        Self { api_info }
-    }
-}
-
-impl IronTradeClientProvider<AlpacaClient> for AlpacaClientProvider {
-    fn create_client(&self) -> Result<AlpacaClient> {
-        Ok(AlpacaClient::new(self.api_info.clone()))
-    }
-}
 
 pub struct AlpacaClient {
     apca_client: Client,
@@ -39,6 +23,22 @@ impl AlpacaClient {
         Self {
             apca_client: Client::new(api_info),
         }
+    }
+}
+
+pub struct AlpacaClientBuilder {
+    api_info: ApiInfo,
+}
+
+impl AlpacaClientBuilder {
+    pub fn new(api_info: ApiInfo) -> Self {
+        Self { api_info }
+    }
+}
+
+impl IronTradeClientBuilder<AlpacaClient> for AlpacaClientBuilder {
+    fn build(self) -> Result<AlpacaClient> {
+        Ok(AlpacaClient::new(self.api_info))
     }
 }
 
@@ -104,11 +104,13 @@ mod tests {
     use super::*;
     use crate::api::common::{Amount, AssetPair};
     use crate::api::response::OrderStatus;
+    use crate::provider::{IronTradeClientProvider};
     use apca::ApiInfo;
     use num_decimal::Num;
     use std::str::FromStr;
     use std::time::Duration;
     use tokio::time::sleep;
+    use crate::provider::simple::SimpleProvider;
 
     #[tokio::test]
     async fn buy_market_returns_order_id() {
@@ -191,8 +193,8 @@ mod tests {
     }
 
     fn create_client() -> AlpacaClient {
-        AlpacaClientProvider::new(ApiInfo::from_env().unwrap())
-            .create_client()
+        SimpleProvider
+            .create_client(AlpacaClientBuilder::new(ApiInfo::from_env().unwrap()))
             .unwrap()
     }
 }

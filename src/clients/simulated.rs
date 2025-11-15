@@ -6,29 +6,10 @@ use crate::api::request::MarketOrderRequest;
 use crate::api::response::{
     BuyMarketResponse, GetOpenPositionResponse, GetOrdersResponse, SellMarketResponse,
 };
-use crate::provider::IronTradeClientProvider;
-use crate::providers::simulated::broker::{SimulatedBroker, SimulatedBrokerBuilder};
+use crate::clients::simulated::broker::SimulatedBroker;
 use anyhow::Result;
-use num_decimal::Num;
 
 mod broker;
-
-pub struct SimulatedClientProvider {
-    usd_balance: Num,
-}
-
-impl SimulatedClientProvider {
-    pub fn new(usd_balance: Num) -> Self {
-        Self { usd_balance }
-    }
-}
-
-impl IronTradeClientProvider<SimulatedClient> for SimulatedClientProvider {
-    fn create_client(&self) -> Result<SimulatedClient> {
-        let broker = SimulatedBrokerBuilder::new("USD").build();
-        Ok(SimulatedClient { broker })
-    }
-}
 
 pub struct SimulatedClient {
     broker: SimulatedBroker,
