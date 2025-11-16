@@ -22,6 +22,7 @@ pub enum Amount {
 ///
 /// ```
 /// use irontrade::api::common::AssetPair;
+/// use std::str::FromStr;
 ///
 /// let asset_pair = AssetPair::from_str("BTC/USD").unwrap();
 /// ```
