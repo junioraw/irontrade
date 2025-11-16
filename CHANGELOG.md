@@ -1,3 +1,7 @@
+0.1.6
+----
+- Fix code snippet formatting in README.md
+
 0.1.5
 ----
 - Enable alpaca by default so documentation in docs.rs includes its module
