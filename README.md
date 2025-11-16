@@ -4,8 +4,6 @@ irontrade
 - [Documentation][docs-rs]
 - [Changelog](CHANGELOG.md)
 
-$${\color{red}DO \space NOT \space USE: \space work \space in \space progress}$$
-
 **irontrade** is a library for interacting with different trading brokers, as well as creating custom local brokers for
 more streamlined testing.
 
