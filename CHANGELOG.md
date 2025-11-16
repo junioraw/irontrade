@@ -1,3 +1,7 @@
+0.1.8
+----
+- Documentation for client, common and provider modules.
+
 0.1.7
 ----
 - Make mod alpaca::client public
