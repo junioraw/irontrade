@@ -2,8 +2,7 @@
 
 use crate::api::request::MarketOrderRequest;
 use crate::api::response::{
-    BuyMarketResponse, GetCashResponse, GetOpenPositionResponse, GetOrdersResponse,
-    SellMarketResponse,
+    GetCashResponse, GetOpenPositionResponse, GetOrdersResponse, MarketOrderResponse,
 };
 use anyhow::Result;
 
@@ -13,13 +12,13 @@ pub trait IronTradeClient {
     fn buy_market(
         &mut self,
         req: MarketOrderRequest,
-    ) -> impl Future<Output = Result<BuyMarketResponse>> + Send;
+    ) -> impl Future<Output = Result<MarketOrderResponse>> + Send;
 
     /// Places a market sell order. If successful returns the order of the newly placed order.
     fn sell_market(
         &mut self,
         req: MarketOrderRequest,
-    ) -> impl Future<Output = Result<SellMarketResponse>> + Send;
+    ) -> impl Future<Output = Result<MarketOrderResponse>> + Send;
 
     /// Returns all placed orders regardless of status.
     fn get_orders(&self) -> impl Future<Output = Result<GetOrdersResponse>> + Send;

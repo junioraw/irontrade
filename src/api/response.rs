@@ -3,11 +3,7 @@
 use crate::api::common::Amount;
 use num_decimal::Num;
 
-pub struct BuyMarketResponse {
-    pub order_id: String,
-}
-
-pub struct SellMarketResponse {
+pub struct MarketOrderResponse {
     pub order_id: String,
 }
 

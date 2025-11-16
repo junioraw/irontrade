@@ -2,8 +2,7 @@ use crate::api::client::IronTradeClient;
 use crate::api::provider::IronTradeClientBuilder;
 use crate::api::request::MarketOrderRequest;
 use crate::api::response::{
-    BuyMarketResponse, GetCashResponse, GetOpenPositionResponse, GetOrdersResponse, Order,
-    SellMarketResponse,
+    GetCashResponse, GetOpenPositionResponse, GetOrdersResponse, MarketOrderResponse, Order,
 };
 use anyhow::Result;
 use apca::api::v2::asset::Symbol;
@@ -41,7 +40,7 @@ impl IronTradeClientBuilder<AlpacaClient> for AlpacaClientBuilder {
 }
 
 impl IronTradeClient for AlpacaClient {
-    async fn buy_market(&mut self, req: MarketOrderRequest) -> Result<BuyMarketResponse> {
+    async fn buy_market(&mut self, req: MarketOrderRequest) -> Result<MarketOrderResponse> {
         let request = order::CreateReqInit {
             type_: Type::Market,
             time_in_force: TimeInForce::UntilCanceled,
@@ -51,12 +50,12 @@ impl IronTradeClient for AlpacaClient {
 
         let order = self.apca_client.issue::<order::Create>(&request).await?;
 
-        Ok(BuyMarketResponse {
+        Ok(MarketOrderResponse {
             order_id: order.id.to_string(),
         })
     }
 
-    async fn sell_market(&mut self, req: MarketOrderRequest) -> Result<SellMarketResponse> {
+    async fn sell_market(&mut self, req: MarketOrderRequest) -> Result<MarketOrderResponse> {
         let request = order::CreateReqInit {
             type_: Type::Market,
             ..Default::default()
@@ -65,7 +64,7 @@ impl IronTradeClient for AlpacaClient {
 
         let order = self.apca_client.issue::<order::Create>(&request).await?;
 
-        Ok(SellMarketResponse {
+        Ok(MarketOrderResponse {
             order_id: order.id.to_string(),
         })
     }
