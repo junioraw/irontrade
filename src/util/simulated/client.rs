@@ -1,7 +1,10 @@
 use crate::api::client::IronTradeClient;
-use crate::api::common::Amount;
+use crate::api::common::{Amount, AssetPair};
 use crate::api::request::MarketOrderRequest;
-use crate::api::response::{BuyMarketResponse, GetCashResponse, GetOpenPositionResponse, GetOrdersResponse, SellMarketResponse};
+use crate::api::response::{
+    BuyMarketResponse, GetCashResponse, GetOpenPositionResponse, GetOrdersResponse, OpenPosition,
+    SellMarketResponse,
+};
 use crate::util::simulated::broker::SimulatedBroker;
 use anyhow::Result;
 
@@ -43,10 +46,24 @@ impl IronTradeClient for SimulatedClient {
     }
 
     async fn get_cash(&self) -> Result<GetCashResponse> {
-        todo!()
+        Ok(GetCashResponse {
+            cash: self.broker.get_balance(&self.broker.get_currency()),
+        })
     }
 
     async fn get_open_position(&self, asset_symbol: &str) -> Result<GetOpenPositionResponse> {
-        todo!()
+        let balance = self.broker.get_balance(asset_symbol);
+        let notional_per_unit = self.broker.get_notional_per_unit(&AssetPair {
+            notional_asset: self.broker.get_currency(),
+            quantity_asset: asset_symbol.into(),
+        })?;
+        Ok(GetOpenPositionResponse {
+            open_position: OpenPosition {
+                asset_symbol: asset_symbol.into(),
+                quantity: balance.clone(),
+                average_entry_price: None,
+                market_value: Some(balance * notional_per_unit),
+            },
+        })
     }
 }

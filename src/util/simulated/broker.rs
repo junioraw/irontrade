@@ -163,12 +163,12 @@ impl SimulatedBroker {
             .unwrap_or(Num::from(0))
     }
 
-    fn get_notional_per_unit(&self, asset_pair: &AssetPair) -> Result<Num> {
+    pub fn get_notional_per_unit(&self, asset_pair: &AssetPair) -> Result<Num> {
         self.check_notional(asset_pair)?;
         self.notional_per_unit
             .get(&asset_pair)
             .map(Num::clone)
-            .ok_or(format_err!("Asset pair {} can't be traded", asset_pair))
+            .ok_or(format_err!("{} is not a valid asset pair", asset_pair))
     }
 
     pub fn set_notional_per_unit(&mut self, asset_pair: AssetPair, notional_per_unit: Num) -> Result<()> {

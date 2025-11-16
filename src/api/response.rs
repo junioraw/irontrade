@@ -35,7 +35,7 @@ pub struct Order {
 
 pub struct OpenPosition {
     pub asset_symbol: String,
-    pub average_entry_price: Num,
+    pub average_entry_price: Option<Num>,
     pub quantity: Num,
     pub market_value: Option<Num>,
 }

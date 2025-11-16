@@ -30,7 +30,7 @@ impl From<Position> for OpenPosition {
     fn from(position: Position) -> Self {
         Self {
             asset_symbol: position.symbol.to_string(),
-            average_entry_price: position.average_entry_price,
+            average_entry_price: Some(position.average_entry_price),
             quantity: position.quantity,
             market_value: position.market_value,
         }
