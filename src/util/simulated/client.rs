@@ -46,7 +46,7 @@ impl IronTradeClient for SimulatedClient {
         todo!()
     }
 
-    async fn get_open_position(&self, asset_symbol: String) -> Result<GetOpenPositionResponse> {
+    async fn get_open_position(&self, asset_symbol: &str) -> Result<GetOpenPositionResponse> {
         todo!()
     }
 }

@@ -89,10 +89,10 @@ impl IronTradeClient for AlpacaClient {
         Ok(GetCashResponse { cash: account.cash })
     }
 
-    async fn get_open_position(&self, asset_symbol: String) -> Result<GetOpenPositionResponse> {
+    async fn get_open_position(&self, asset_symbol: &str) -> Result<GetOpenPositionResponse> {
         let position = self
             .apca_client
-            .issue::<position::Get>(&Symbol::Sym(asset_symbol))
+            .issue::<position::Get>(&Symbol::Sym(asset_symbol.into()))
             .await?;
 
         Ok(GetOpenPositionResponse {

@@ -31,6 +31,6 @@ pub trait IronTradeClient {
     /// Returns an open position for the given asset_symbol.
     fn get_open_position(
         &self,
-        asset_symbol: String,
+        asset_symbol: &str,
     ) -> impl Future<Output = Result<GetOpenPositionResponse>> + Send;
 }
