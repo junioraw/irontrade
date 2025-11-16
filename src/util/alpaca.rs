@@ -3,7 +3,7 @@
 use crate::api::provider::IronTradeClientProvider;
 use crate::util::alpaca::client::AlpacaClient;
 
-mod client;
+pub mod client;
 mod convert;
 
 pub struct AlpacaProvider {
