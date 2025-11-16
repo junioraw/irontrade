@@ -39,8 +39,8 @@ notional: Num::from(100)
 println!("Placed order with id {order_id}");
 ```
 
-> **_NOTE:_**  Non-simulated clients are feature flagged. To run unit tests against a non-simulated client make sure to
-> enable all features or the feature for the specific client in `cargo test`. For example, to include the alpaca client,
-> this would be `cargo test --features alpaca`.
+> **_NOTE:_**  Non-simulated clients are feature flagged and disabled by default. To run unit tests against a
+> non-simulated client make sure to enable all features or the feature for the specific client in `cargo test`. For
+> example, to include the alpaca client, this would be `cargo test --features alpaca`.
 
 [docs-rs]: https://docs.rs/irontrade/latest/irontrade/
