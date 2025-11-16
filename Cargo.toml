@@ -8,9 +8,16 @@ Rust trading client.
 """
 repository = "https://github.com/junioraw/irontrade"
 
+[features]
+# Whether the Alpaca client is included in the crate
+alpaca = ["dep:apca"]
+serde = ["dep:serde"]
+default = ["serde"]
+
 [dependencies]
 anyhow = "1.0.100"
 num-decimal = { version = "0.2.5", default-features = false, features = ["num-v04", "serde"] }
-apca = { git = "https://github.com/junioraw/apca.git", branch = "patch-get_position" }
-tokio = { version = "1.48.0", features = ["macros"] }
+apca = { git = "https://github.com/junioraw/apca.git", branch = "patch-get_position", optional = true }
+tokio = { version = "1.48.0", features = ["macros", "rt"] }
 uuid = { version = "1.18.1", features = ["v4"] }
+serde = { version = "1.0.228", optional = true}

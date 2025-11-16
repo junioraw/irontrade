@@ -102,6 +102,7 @@ impl IronTradeClient for AlpacaClient {
 }
 
 // Tests use environment variable keys for api secret, so make sure those are set to a paper test account
+#[cfg(feature = "alpaca")]
 #[cfg(test)]
 mod tests {
     use super::*;
