@@ -1,5 +1,9 @@
+0.1.5
+----
+- Enable alpaca by default so documentation in docs.rs includes its module
+
 0.1.4
----
+----
 - MVP reached for API: implemented all basic methods for existing providers
 - Feature flagged the alpaca provider. It is only necessary when callers use this API to interact with Alpaca. The main use case for the API is the simulated provider
 - Cleaned up and restructured the API. For example order request and response structs were halved given that buy and sell orders have the same request and response fields as of now
