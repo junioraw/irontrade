@@ -18,7 +18,7 @@ pub enum Amount {
 ///
 /// Can either be initialized via struct construction or from parsing a string representing an asset pair.
 ///
-/// #Examples
+/// #Example
 ///
 /// ```
 /// use irontrade::api::common::AssetPair;
