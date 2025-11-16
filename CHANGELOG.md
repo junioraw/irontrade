@@ -1,3 +1,8 @@
+0.1.7
+----
+- Make mod alpaca::client public
+- Another code formatting fix in README.md
+
 0.1.6
 ----
 - Fix code snippet formatting in README.md
