@@ -27,12 +27,12 @@ let order_id = client
     .buy_market(MarketOrderRequest {
         asset_pair: AssetPair::from_str("AAPL/USD").unwrap(),
         amount: Amount::Notional {
-        notional: Num::from(100),
-    },
-})
-.await
-.unwrap()
-.order_id;
+            notional: Num::from(100),
+        },
+    })
+    .await
+    .unwrap()
+    .order_id;
 
 println!("Placed order with id {order_id}");
 ```
