@@ -209,7 +209,7 @@ mod tests {
     async fn get_open_position() {
         let client = create_client();
         let position = client
-            .get_open_position("AAVEUSD".into())
+            .get_open_position("AAVE/USD".into())
             .await
             .unwrap()
             .open_position;
