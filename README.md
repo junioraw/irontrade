@@ -19,16 +19,16 @@ The following example creates a simulated trading client with an initial balance
 buy AAPL worth of 100 USD.
 
 ```rust
-    // Can be any supported / custom provider and client combination
+// Can be any supported / custom provider and client combination
 let provider = SimulatedIronTradeClientProvider::new(Num::from(1000));
 let mut client = provider.create_client().unwrap();
 
 let order_id = client
-.buy_market(MarketOrderRequest{
-asset_pair: AssetPair::from_str("AAPL/USD").unwrap(),
-amount: Amount::Notional {
-notional: Num::from(100)
-}
+    .buy_market(MarketOrderRequest {
+        asset_pair: AssetPair::from_str("AAPL/USD").unwrap(),
+        amount: Amount::Notional {
+        notional: Num::from(100),
+    },
 })
 .await
 .unwrap()
