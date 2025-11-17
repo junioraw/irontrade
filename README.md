@@ -4,7 +4,7 @@ irontrade
 - [Documentation][docs-rs]
 - [Changelog](CHANGELOG.md)
 
-**irontrade** is a library defining an interface for interacting with different trading brokers, as well as custom data providers for strategy testing.
+**irontrade** is a crate for simulating trading with custom data providers. It also publishes its trading interface to easily plug those strategies into actual trading clients.
 
 Usage
 ----
