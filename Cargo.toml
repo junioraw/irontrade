@@ -4,7 +4,7 @@ version = "0.1.9"
 edition = "2024"
 license = "GPL-3.0-or-later"
 description = """
-Rust trading strategy testing.
+Rust trading strategies testing.
 """
 repository = "https://github.com/junioraw/irontrade"
 
