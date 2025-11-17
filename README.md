@@ -4,13 +4,7 @@ irontrade
 - [Documentation][docs-rs]
 - [Changelog](CHANGELOG.md)
 
-**irontrade** is a library for interacting with different trading brokers, as well as creating custom local brokers for
-more streamlined testing.
-
-For live and paper trading it currently supports Alpaca through [apca](https://github.com/d-e-s-o/apca), which is a
-large inspiration for this crate.
-
-For testing, it has a simulated trading client provider, which can rely on a remote or local backend.
+**irontrade** is a library defining an interface for interacting with different trading brokers, as well as custom data providers for strategy testing.
 
 Usage
 ----
@@ -19,9 +13,9 @@ The following example creates a simulated trading client with an initial balance
 buy AAPL worth of 100 USD.
 
 ```rust
-// Can be any supported / custom provider and client combination
-let provider = SimulatedIronTradeClientProvider::new(Num::from(1000));
-let mut client = provider.create_client().unwrap();
+// Create USD based broker
+let mut broker = SimulatedBrokerBuilder::new("USD").build();
+let mut client = SimulatedClient::new(broker);
 
 let order_id = client
     .buy_market(MarketOrderRequest {

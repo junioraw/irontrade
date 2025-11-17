@@ -11,6 +11,12 @@ pub struct SimulatedClient {
     broker: SimulatedBroker,
 }
 
+impl SimulatedClient {
+    pub fn new(broker: SimulatedBroker) -> Self {
+        Self { broker }
+    }
+}
+
 impl IronTradeClient for SimulatedClient {
     async fn buy_market(&mut self, req: MarketOrderRequest) -> Result<MarketOrderResponse> {
         let order_id = self.broker.place_order(req)?;
