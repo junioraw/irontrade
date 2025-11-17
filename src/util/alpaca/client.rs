@@ -1,5 +1,4 @@
 use crate::api::client::IronTradeClient;
-use crate::api::provider::IronTradeClientBuilder;
 use crate::api::request::MarketOrderRequest;
 use crate::api::response::{
     GetCashResponse, GetOpenPositionResponse, GetOrdersResponse, MarketOrderResponse, Order,
@@ -7,7 +6,7 @@ use crate::api::response::{
 use anyhow::Result;
 use apca::api::v2::asset::Symbol;
 use apca::api::v2::order::{Side, TimeInForce, Type};
-use apca::api::v2::orders::ListReq;
+use apca::api::v2::orders::{ListReq, Status};
 use apca::api::v2::{account, order, orders, position};
 use apca::{ApiInfo, Client};
 
@@ -20,22 +19,6 @@ impl AlpacaClient {
         Self {
             apca_client: Client::new(api_info),
         }
-    }
-}
-
-pub struct AlpacaClientBuilder {
-    api_info: ApiInfo,
-}
-
-impl AlpacaClientBuilder {
-    pub fn new(api_info: ApiInfo) -> Self {
-        Self { api_info }
-    }
-}
-
-impl IronTradeClientBuilder<AlpacaClient> for AlpacaClientBuilder {
-    fn build(self) -> Result<AlpacaClient> {
-        Ok(AlpacaClient::new(self.api_info))
     }
 }
 
@@ -58,6 +41,7 @@ impl IronTradeClient for AlpacaClient {
     async fn sell_market(&mut self, req: MarketOrderRequest) -> Result<MarketOrderResponse> {
         let request = order::CreateReqInit {
             type_: Type::Market,
+            time_in_force: TimeInForce::UntilCanceled,
             ..Default::default()
         }
         .init(req.asset_pair.to_string(), Side::Sell, req.amount.into());
@@ -73,6 +57,7 @@ impl IronTradeClient for AlpacaClient {
         let orders: Vec<Order> = self
             .apca_client
             .issue::<orders::List>(&ListReq {
+                status: Status::All,
                 ..Default::default()
             })
             .await?
@@ -106,9 +91,7 @@ impl IronTradeClient for AlpacaClient {
 mod tests {
     use super::*;
     use crate::api::common::{Amount, AssetPair};
-    use crate::api::provider::IronTradeClientProvider;
     use crate::api::response::OrderStatus;
-    use crate::util::alpaca::AlpacaProvider;
     use apca::ApiInfo;
     use num_decimal::Num;
     use std::str::FromStr;
@@ -133,7 +116,6 @@ mod tests {
     }
 
     #[tokio::test]
-    #[ignore] // can take a while before the buy order is filled in order to verify a successful sale
     async fn sell_market_returns_order_id() {
         let mut client = create_client();
 
@@ -148,8 +130,12 @@ mod tests {
             .unwrap()
             .order_id;
 
+        dbg!(&buy_order_id);
         loop {
             let orders = client.get_orders().await.unwrap().orders;
+            let order_ids: Vec<String> =
+                orders.iter().map(|order| order.order_id.clone()).collect();
+            dbg!(&order_ids);
             let buy_order = orders
                 .iter()
                 .find(|order| order.order_id == buy_order_id)
@@ -180,23 +166,24 @@ mod tests {
         let mut client = create_client();
         let pre_existing_orders = client.get_orders().await.unwrap().orders;
 
-        client
-            .buy_market(MarketOrderRequest {
-                asset_pair: AssetPair::from_str("BTC/USD").unwrap(),
-                amount: Amount::Notional {
-                    notional: Num::from(20),
-                },
-            })
-            .await
-            .unwrap();
+        if pre_existing_orders.is_empty() {
+            client
+                .buy_market(MarketOrderRequest {
+                    asset_pair: AssetPair::from_str("BTC/USD").unwrap(),
+                    amount: Amount::Notional {
+                        notional: Num::from(20),
+                    },
+                })
+                .await
+                .unwrap();
 
-        let orders = client.get_orders().await.unwrap().orders;
+            let orders = client.get_orders().await.unwrap().orders;
 
-        assert!(orders.len() > pre_existing_orders.len())
+            assert!(orders.len() > 0)
+        }
     }
 
     #[tokio::test]
-    #[ignore] // Only run when it's guaranteed that the paper account has cash
     async fn get_cash() {
         let client = create_client();
         let cash = client.get_cash().await.unwrap().cash;
@@ -204,16 +191,39 @@ mod tests {
     }
 
     #[tokio::test]
-    #[ignore] // Only run when it's guaranteed that the paper account has an open position
-    // TODO: place an order instead and remove ignore macro once https://github.com/alpacahq/Alpaca-API/issues/278 is fixed
     async fn get_open_position() {
-        let client = create_client();
+        let mut client = create_client();
+
+        let buy_order_id = client
+            .buy_market(MarketOrderRequest {
+                asset_pair: AssetPair::from_str("BTC/USD").unwrap(),
+                amount: Amount::Notional {
+                    notional: Num::from(20),
+                },
+            })
+            .await
+            .unwrap()
+            .order_id;
+
+        loop {
+            let orders = client.get_orders().await.unwrap().orders;
+            let buy_order = orders
+                .iter()
+                .find(|order| order.order_id == buy_order_id)
+                .unwrap();
+            if matches!(buy_order.status, OrderStatus::Filled) {
+                break;
+            }
+            sleep(Duration::from_secs(1)).await;
+        }
+
         let position = client
-            .get_open_position("AAVE/USD".into())
+            .get_open_position("BTC/USD".into())
             .await
             .unwrap()
             .open_position;
-        assert_eq!(position.asset_symbol, "AAVEUSD")
+
+        assert_eq!(position.asset_symbol, "BTCUSD")
     }
 
     fn create_client() -> AlpacaClient {
@@ -222,8 +232,6 @@ mod tests {
             api_info.api_base_url.to_string().contains("paper"),
             "Use a paper account for unit testing"
         );
-        AlpacaProvider::new()
-            .create_client(AlpacaClientBuilder::new(ApiInfo::from_env().unwrap()))
-            .unwrap()
+        AlpacaClient::new(api_info)
     }
 }

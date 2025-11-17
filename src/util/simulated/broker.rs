@@ -248,7 +248,7 @@ mod tests {
             })
             .unwrap_err();
 
-        assert_eq!(err.to_string(), "Asset pair AAPL/USD can't be traded");
+        assert_eq!(err.to_string(), "AAPL/USD is not a valid asset pair");
     }
 
     #[test]
