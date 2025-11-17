@@ -1,3 +1,8 @@
+0.1.9
+---
+- Scrub provider
+- Move alpaca client into irontrade_alpaca crate
+
 0.1.8
 ----
 - Documentation for client, common and provider modules.
