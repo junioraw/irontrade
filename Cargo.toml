@@ -11,6 +11,5 @@ repository = "https://github.com/junioraw/irontrade"
 
 [dependencies]
 anyhow = "1.0.100"
-num-decimal = { version = "0.2.5", default-features = false, features = ["num-v04", "serde"] }
+num-decimal = "0.2.5"
 uuid = { version = "1.18.1", features = ["v4"] }
-serde = "1.0.228"
