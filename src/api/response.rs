@@ -29,6 +29,7 @@ pub struct Order {
     pub type_: OrderType,
 }
 
+#[derive(PartialEq, Eq, Debug)]
 pub struct OpenPosition {
     pub asset_symbol: String,
     pub average_entry_price: Option<Num>,
