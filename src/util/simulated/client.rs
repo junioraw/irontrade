@@ -2,7 +2,7 @@ use crate::api::client::IronTradeClient;
 use crate::api::common::{Amount, AssetPair, OpenPosition};
 use crate::api::request::OrderRequest;
 use crate::api::response::{
-    GetCashResponse, GetOpenPositionResponse, GetOrdersResponse, OrderResponse
+    GetCashResponse, GetOpenPositionResponse, GetOrdersResponse, OrderResponse,
 };
 use crate::util::simulated::broker::SimulatedBroker;
 use anyhow::Result;
@@ -32,6 +32,9 @@ impl IronTradeClient for SimulatedClient {
         Ok(OrderResponse { order_id })
     }
 
+    async fn buy_limit(&mut self, req: OrderRequest, limit_price: Num) -> Result<OrderResponse> {
+        todo!()
+    }
     async fn sell_market(&mut self, req: OrderRequest) -> Result<OrderResponse> {
         let req = OrderRequest {
             asset_pair: req.asset_pair,
@@ -46,6 +49,10 @@ impl IronTradeClient for SimulatedClient {
         };
         let order_id = self.broker.place_order(req)?;
         Ok(OrderResponse { order_id })
+    }
+
+    async fn sell_limit(&mut self, req: OrderRequest, limit_price: Num) -> Result<OrderResponse> {
+        todo!()
     }
 
     async fn get_orders(&self) -> Result<GetOrdersResponse> {
