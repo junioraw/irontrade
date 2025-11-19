@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-use crate::api::common::Amount;
 use num_decimal::Num;
+use crate::api::common::{OpenPosition, Order};
 
-pub struct MarketOrderResponse {
+pub struct OrderResponse {
     pub order_id: String,
 }
 
@@ -17,35 +17,4 @@ pub struct GetCashResponse {
 
 pub struct GetOpenPositionResponse {
     pub open_position: OpenPosition,
-}
-
-pub struct Order {
-    pub order_id: String,
-    pub asset_symbol: String,
-    pub amount: Amount,
-    pub filled_quantity: Num,
-    pub average_fill_price: Option<Num>,
-    pub status: OrderStatus,
-    pub type_: OrderType,
-}
-
-#[derive(PartialEq, Eq, Debug)]
-pub struct OpenPosition {
-    pub asset_symbol: String,
-    pub average_entry_price: Option<Num>,
-    pub quantity: Num,
-    pub market_value: Option<Num>,
-}
-
-pub enum OrderStatus {
-    New,
-    PartiallyFilled,
-    Filled,
-    Expired,
-    Unimplemented,
-}
-
-pub enum OrderType {
-    Market,
-    Limit,
 }

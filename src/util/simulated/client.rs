@@ -1,8 +1,8 @@
 use crate::api::client::IronTradeClient;
-use crate::api::common::{Amount, AssetPair};
-use crate::api::request::MarketOrderRequest;
+use crate::api::common::{Amount, AssetPair, OpenPosition};
+use crate::api::request::OrderRequest;
 use crate::api::response::{
-    GetCashResponse, GetOpenPositionResponse, GetOrdersResponse, MarketOrderResponse, OpenPosition,
+    GetCashResponse, GetOpenPositionResponse, GetOrdersResponse, OrderResponse
 };
 use crate::util::simulated::broker::SimulatedBroker;
 use anyhow::Result;
@@ -27,13 +27,13 @@ impl SimulatedClient {
 }
 
 impl IronTradeClient for SimulatedClient {
-    async fn buy_market(&mut self, req: MarketOrderRequest) -> Result<MarketOrderResponse> {
+    async fn buy_market(&mut self, req: OrderRequest) -> Result<OrderResponse> {
         let order_id = self.broker.place_order(req)?;
-        Ok(MarketOrderResponse { order_id })
+        Ok(OrderResponse { order_id })
     }
 
-    async fn sell_market(&mut self, req: MarketOrderRequest) -> Result<MarketOrderResponse> {
-        let req = MarketOrderRequest {
+    async fn sell_market(&mut self, req: OrderRequest) -> Result<OrderResponse> {
+        let req = OrderRequest {
             asset_pair: req.asset_pair,
             amount: match req.amount {
                 Amount::Quantity { quantity } => Amount::Quantity {
@@ -45,7 +45,7 @@ impl IronTradeClient for SimulatedClient {
             },
         };
         let order_id = self.broker.place_order(req)?;
-        Ok(MarketOrderResponse { order_id })
+        Ok(OrderResponse { order_id })
     }
 
     async fn get_orders(&self) -> Result<GetOrdersResponse> {
@@ -97,7 +97,7 @@ mod tests {
         let mut client = create_client();
 
         let order_id = client
-            .buy_market(MarketOrderRequest {
+            .buy_market(OrderRequest {
                 asset_pair: ten_dollars_asset_pair(),
                 amount: Amount::Notional {
                     notional: Num::from(10),
@@ -115,7 +115,7 @@ mod tests {
         let mut client = create_client();
 
         client
-            .buy_market(MarketOrderRequest {
+            .buy_market(OrderRequest {
                 asset_pair: ten_dollars_asset_pair(),
                 amount: Amount::Notional {
                     notional: Num::from(10),
@@ -124,7 +124,7 @@ mod tests {
             .await
             .unwrap();
         let order_id = client
-            .sell_market(MarketOrderRequest {
+            .sell_market(OrderRequest {
                 asset_pair: ten_dollars_asset_pair(),
                 amount: Amount::Notional {
                     notional: Num::from(10),
@@ -144,7 +144,7 @@ mod tests {
         assert_eq!(client.get_orders().await.unwrap().orders.len(), 0);
 
         client
-            .buy_market(MarketOrderRequest {
+            .buy_market(OrderRequest {
                 asset_pair: ten_dollars_asset_pair(),
                 amount: Amount::Notional {
                     notional: Num::from(10),
@@ -156,7 +156,7 @@ mod tests {
         assert_eq!(client.get_orders().await.unwrap().orders.len(), 1);
 
         client
-            .sell_market(MarketOrderRequest {
+            .sell_market(OrderRequest {
                 asset_pair: ten_dollars_asset_pair(),
                 amount: Amount::Notional {
                     notional: Num::from(10),
@@ -175,7 +175,7 @@ mod tests {
         assert_eq!(client.get_cash().await.unwrap().cash, Num::from(1000));
 
         client
-            .buy_market(MarketOrderRequest {
+            .buy_market(OrderRequest {
                 asset_pair: ten_dollars_asset_pair(),
                 amount: Amount::Notional {
                     notional: Num::from(10),
@@ -187,7 +187,7 @@ mod tests {
         assert_eq!(client.get_cash().await.unwrap().cash, Num::from(990));
 
         client
-            .sell_market(MarketOrderRequest {
+            .sell_market(OrderRequest {
                 asset_pair: ten_dollars_asset_pair(),
                 amount: Amount::Notional {
                     notional: Num::from(5),
@@ -218,7 +218,7 @@ mod tests {
         );
 
         client
-            .buy_market(MarketOrderRequest {
+            .buy_market(OrderRequest {
                 asset_pair: ten_dollars_asset_pair(),
                 amount: Amount::Notional {
                     notional: Num::from(15),
@@ -242,7 +242,7 @@ mod tests {
         );
 
         client
-            .sell_market(MarketOrderRequest {
+            .sell_market(OrderRequest {
                 asset_pair: ten_dollars_asset_pair(),
                 amount: Amount::Notional {
                     notional: Num::from(10),
