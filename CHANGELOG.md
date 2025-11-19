@@ -1,5 +1,9 @@
+0.1.10
+----
+- Add set_notional_per_unit to SimulatedClient
+
 0.1.9
----
+----
 - Scrub provider
 - Move alpaca client into irontrade_alpaca crate
 
