@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-use crate::api::request::MarketOrderRequest;
+use crate::api::request::OrderRequest;
 use crate::api::response::{
-    GetCashResponse, GetOpenPositionResponse, GetOrdersResponse, MarketOrderResponse,
+    GetCashResponse, GetOpenPositionResponse, GetOrdersResponse, OrderResponse,
 };
 use anyhow::Result;
 
@@ -11,14 +11,14 @@ pub trait IronTradeClient {
     /// Places a market buy order. If successful returns the order id of the newly placed order.
     fn buy_market(
         &mut self,
-        req: MarketOrderRequest,
-    ) -> impl Future<Output = Result<MarketOrderResponse>> + Send;
+        req: OrderRequest,
+    ) -> impl Future<Output = Result<OrderResponse>> + Send;
 
     /// Places a market sell order. If successful returns the order of the newly placed order.
     fn sell_market(
         &mut self,
-        req: MarketOrderRequest,
-    ) -> impl Future<Output = Result<MarketOrderResponse>> + Send;
+        req: OrderRequest,
+    ) -> impl Future<Output = Result<OrderResponse>> + Send;
 
     /// Returns all placed orders regardless of status.
     fn get_orders(&self) -> impl Future<Output = Result<GetOrdersResponse>> + Send;

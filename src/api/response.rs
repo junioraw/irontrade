@@ -3,7 +3,7 @@
 use num_decimal::Num;
 use crate::api::common::{OpenPosition, Order};
 
-pub struct MarketOrderResponse {
+pub struct OrderResponse {
     pub order_id: String,
 }
 

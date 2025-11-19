@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 use crate::api::common::{Amount, AssetPair, Order, OrderStatus, OrderType};
-use crate::api::request::MarketOrderRequest;
+use crate::api::request::OrderRequest;
 use anyhow::{format_err, Result};
 use num_decimal::Num;
 use std::collections::{HashMap, HashSet};
@@ -77,7 +77,7 @@ impl SimulatedBroker {
 
     // Only supports market orders,
     // in this case they execute immediately since the exchange rate is determined in this method
-    pub fn place_order(&mut self, order_req: MarketOrderRequest) -> Result<String> {
+    pub fn place_order(&mut self, order_req: OrderRequest) -> Result<String> {
         let notional_per_unit = &self.get_notional_per_unit(&order_req.asset_pair)?;
 
         let quantity: &Num = match &order_req.amount {
@@ -239,7 +239,7 @@ mod tests {
             .build();
 
         let err = broker
-            .place_order(MarketOrderRequest {
+            .place_order(OrderRequest {
                 asset_pair: AssetPair::from_str("AAPL/USD").unwrap(),
                 amount: Amount::Quantity {
                     quantity: Num::from(10),
@@ -260,7 +260,7 @@ mod tests {
         );
 
         let err = broker
-            .place_order(MarketOrderRequest {
+            .place_order(OrderRequest {
                 asset_pair: AssetPair::from_str("GBP/USD").unwrap(),
                 amount: Amount::Quantity {
                     quantity: Num::from(10),
@@ -273,7 +273,7 @@ mod tests {
         broker.update_balance("USD", Num::from_str("13.09").unwrap());
 
         let err = broker
-            .place_order(MarketOrderRequest {
+            .place_order(OrderRequest {
                 asset_pair: AssetPair::from_str("GBP/USD").unwrap(),
                 amount: Amount::Quantity {
                     quantity: Num::from(10),
@@ -296,7 +296,7 @@ mod tests {
         );
 
         broker
-            .place_order(MarketOrderRequest {
+            .place_order(OrderRequest {
                 asset_pair: AssetPair::from_str("GBP/USD").unwrap(),
                 amount: Amount::Quantity {
                     quantity: Num::from(10),
@@ -322,7 +322,7 @@ mod tests {
             .unwrap();
 
         let order_id = broker
-            .place_order(MarketOrderRequest {
+            .place_order(OrderRequest {
                 asset_pair: AssetPair::from_str("GBP/USD").unwrap(),
                 amount: Amount::Quantity {
                     quantity: Num::from(10),
@@ -348,7 +348,7 @@ mod tests {
             .unwrap();
 
         let order_id = broker
-            .place_order(MarketOrderRequest {
+            .place_order(OrderRequest {
                 asset_pair: AssetPair::from_str("GBP/USD").unwrap(),
                 amount: Amount::Quantity {
                     quantity: Num::from(10),
@@ -384,7 +384,7 @@ mod tests {
             .unwrap();
 
         let order_id = broker
-            .place_order(MarketOrderRequest {
+            .place_order(OrderRequest {
                 asset_pair: AssetPair::from_str("GBP/USD").unwrap(),
                 amount: Amount::Notional {
                     notional: Num::from_str("6.55").unwrap(),
