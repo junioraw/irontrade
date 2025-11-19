@@ -6,6 +6,7 @@ use crate::api::response::{
 };
 use crate::util::simulated::broker::SimulatedBroker;
 use anyhow::Result;
+use num_decimal::Num;
 
 pub struct SimulatedClient {
     broker: SimulatedBroker,
@@ -14,6 +15,14 @@ pub struct SimulatedClient {
 impl SimulatedClient {
     pub fn new(broker: SimulatedBroker) -> Self {
         Self { broker }
+    }
+    pub fn set_notional_per_unit(
+        &mut self,
+        asset_pair: AssetPair,
+        notional_per_unit: Num,
+    ) -> Result<()> {
+        self.broker
+            .set_notional_per_unit(asset_pair, notional_per_unit)
     }
 }
 
@@ -82,12 +91,14 @@ mod tests {
 
     #[tokio::test]
     async fn buy_market_returns_order_id() {
-        let mut broker = SimulatedBrokerBuilder::new("USD")
+        let broker = SimulatedBrokerBuilder::new("USD")
             .set_balance(Num::from(1000))
             .build();
-        let avax = AssetPair::from_str("AVAX/USD").unwrap();
-        broker.set_notional_per_unit(avax, Num::from(10)).unwrap();
+
         let mut client = SimulatedClient::new(broker);
+        let avax = AssetPair::from_str("AVAX/USD").unwrap();
+        client.set_notional_per_unit(avax, Num::from(10)).unwrap();
+
         let order_id = client
             .buy_market(MarketOrderRequest {
                 asset_pair: AssetPair::from_str("AVAX/USD").unwrap(),
@@ -98,17 +109,20 @@ mod tests {
             .await
             .unwrap()
             .order_id;
+
         assert_ne!(order_id, "");
     }
 
     #[tokio::test]
     async fn sell_market_returns_order_id() {
-        let mut broker = SimulatedBrokerBuilder::new("USD")
+        let broker = SimulatedBrokerBuilder::new("USD")
             .set_balance(Num::from(1000))
             .build();
-        let avax = AssetPair::from_str("AVAX/USD").unwrap();
-        broker.set_notional_per_unit(avax, Num::from(10)).unwrap();
+
         let mut client = SimulatedClient::new(broker);
+        let avax = AssetPair::from_str("AVAX/USD").unwrap();
+        client.set_notional_per_unit(avax, Num::from(10)).unwrap();
+
         client
             .buy_market(MarketOrderRequest {
                 asset_pair: AssetPair::from_str("AVAX/USD").unwrap(),
@@ -118,7 +132,6 @@ mod tests {
             })
             .await
             .unwrap();
-
         let order_id = client
             .sell_market(MarketOrderRequest {
                 asset_pair: AssetPair::from_str("AVAX/USD").unwrap(),
@@ -135,12 +148,13 @@ mod tests {
 
     #[tokio::test]
     async fn get_orders_returns_all_placed_orders() {
-        let mut broker = SimulatedBrokerBuilder::new("USD")
+        let broker = SimulatedBrokerBuilder::new("USD")
             .set_balance(Num::from(1000))
             .build();
-        let avax = AssetPair::from_str("AVAX/USD").unwrap();
-        broker.set_notional_per_unit(avax, Num::from(10)).unwrap();
+
         let mut client = SimulatedClient::new(broker);
+        let avax = AssetPair::from_str("AVAX/USD").unwrap();
+        client.set_notional_per_unit(avax, Num::from(10)).unwrap();
 
         assert_eq!(client.get_orders().await.unwrap().orders.len(), 0);
 
@@ -171,12 +185,13 @@ mod tests {
 
     #[tokio::test]
     async fn get_cash_returns_current_balance() {
-        let mut broker = SimulatedBrokerBuilder::new("USD")
+        let broker = SimulatedBrokerBuilder::new("USD")
             .set_balance(Num::from(1000))
             .build();
-        let avax = AssetPair::from_str("AVAX/USD").unwrap();
-        broker.set_notional_per_unit(avax, Num::from(10)).unwrap();
+
         let mut client = SimulatedClient::new(broker);
+        let avax = AssetPair::from_str("AVAX/USD").unwrap();
+        client.set_notional_per_unit(avax, Num::from(10)).unwrap();
 
         assert_eq!(client.get_cash().await.unwrap().cash, Num::from(1000));
 
@@ -207,12 +222,13 @@ mod tests {
 
     #[tokio::test]
     async fn get_open_position() {
-        let mut broker = SimulatedBrokerBuilder::new("USD")
+        let broker = SimulatedBrokerBuilder::new("USD")
             .set_balance(Num::from(1000))
             .build();
-        let avax = AssetPair::from_str("AVAX/USD").unwrap();
-        broker.set_notional_per_unit(avax, Num::from(10)).unwrap();
+
         let mut client = SimulatedClient::new(broker);
+        let avax = AssetPair::from_str("AVAX/USD").unwrap();
+        client.set_notional_per_unit(avax, Num::from(10)).unwrap();
 
         assert_eq!(
             client
