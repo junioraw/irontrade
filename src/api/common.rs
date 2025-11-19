@@ -5,6 +5,37 @@ use std::fmt::{Display, Formatter};
 use std::str::FromStr;
 use std::string::ParseError;
 
+pub struct Order {
+    pub order_id: String,
+    pub asset_symbol: String,
+    pub amount: Amount,
+    pub filled_quantity: Num,
+    pub average_fill_price: Option<Num>,
+    pub status: OrderStatus,
+    pub type_: OrderType,
+}
+
+#[derive(PartialEq, Eq, Debug)]
+pub struct OpenPosition {
+    pub asset_symbol: String,
+    pub average_entry_price: Option<Num>,
+    pub quantity: Num,
+    pub market_value: Option<Num>,
+}
+
+pub enum OrderStatus {
+    New,
+    PartiallyFilled,
+    Filled,
+    Expired,
+    Unimplemented,
+}
+
+pub enum OrderType {
+    Market,
+    Limit,
+}
+
 /// Enum representing different value types, can either be a quantity or a notional value.
 pub enum Amount {
     /// Quantity, usually amount of non-notional assets.

@@ -1,8 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-use crate::api::common::{Amount, AssetPair};
+use crate::api::common::{Amount, AssetPair, Order, OrderStatus, OrderType};
 use crate::api::request::MarketOrderRequest;
-use crate::api::response::{Order, OrderStatus, OrderType};
 use anyhow::{format_err, Result};
 use num_decimal::Num;
 use std::collections::{HashMap, HashSet};

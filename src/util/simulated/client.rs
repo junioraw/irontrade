@@ -1,8 +1,8 @@
 use crate::api::client::IronTradeClient;
-use crate::api::common::{Amount, AssetPair};
+use crate::api::common::{Amount, AssetPair, OpenPosition};
 use crate::api::request::MarketOrderRequest;
 use crate::api::response::{
-    GetCashResponse, GetOpenPositionResponse, GetOrdersResponse, MarketOrderResponse, OpenPosition,
+    GetCashResponse, GetOpenPositionResponse, GetOrdersResponse, MarketOrderResponse
 };
 use crate::util::simulated::broker::SimulatedBroker;
 use anyhow::Result;
