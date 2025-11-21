@@ -19,7 +19,6 @@ pub trait IronTradeClient {
     fn buy_limit(
         &mut self,
         req: OrderRequest,
-        limit_price: Num,
     ) -> impl Future<Output = Result<OrderResponse>> + Send;
 
     /// Places a market sell order. If successful returns the order of the newly placed order.

@@ -28,11 +28,11 @@ impl SimulatedClient {
 
 impl IronTradeClient for SimulatedClient {
     async fn buy_market(&mut self, req: OrderRequest) -> Result<OrderResponse> {
-        let order_id = self.broker.place_order(req, None)?;
+        let order_id = self.broker.place_order(req)?;
         Ok(OrderResponse { order_id })
     }
 
-    async fn buy_limit(&mut self, req: OrderRequest, limit_price: Num) -> Result<OrderResponse> {
+    async fn buy_limit(&mut self, req: OrderRequest) -> Result<OrderResponse> {
         todo!()
     }
     async fn sell_market(&mut self, req: OrderRequest) -> Result<OrderResponse> {
@@ -46,8 +46,9 @@ impl IronTradeClient for SimulatedClient {
                     notional: -notional,
                 },
             },
+            limit_price: None,
         };
-        let order_id = self.broker.place_order(req, None)?;
+        let order_id = self.broker.place_order(req)?;
         Ok(OrderResponse { order_id })
     }
 
@@ -110,6 +111,7 @@ mod tests {
                 amount: Amount::Notional {
                     notional: Num::from(10),
                 },
+                limit_price: None,
             })
             .await
             .unwrap()
@@ -128,6 +130,7 @@ mod tests {
                 amount: Amount::Notional {
                     notional: Num::from(10),
                 },
+                limit_price: None,
             })
             .await
             .unwrap();
@@ -137,6 +140,7 @@ mod tests {
                 amount: Amount::Notional {
                     notional: Num::from(10),
                 },
+                limit_price: None,
             })
             .await
             .unwrap()
@@ -157,6 +161,7 @@ mod tests {
                 amount: Amount::Notional {
                     notional: Num::from(10),
                 },
+                limit_price: None,
             })
             .await
             .unwrap()
@@ -170,6 +175,7 @@ mod tests {
                 amount: Amount::Notional {
                     notional: Num::from(10),
                 },
+                limit_price: None,
             })
             .await
             .unwrap()
@@ -238,6 +244,7 @@ mod tests {
                 amount: Amount::Notional {
                     notional: Num::from(10),
                 },
+                limit_price: None,
             })
             .await
             .unwrap();
@@ -250,6 +257,7 @@ mod tests {
                 amount: Amount::Notional {
                     notional: Num::from(5),
                 },
+                limit_price: None,
             })
             .await
             .unwrap();
@@ -281,6 +289,7 @@ mod tests {
                 amount: Amount::Notional {
                     notional: Num::from(15),
                 },
+                limit_price: None,
             })
             .await
             .unwrap();
@@ -305,6 +314,7 @@ mod tests {
                 amount: Amount::Notional {
                     notional: Num::from(10),
                 },
+                limit_price: None,
             })
             .await
             .unwrap();

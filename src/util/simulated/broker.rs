@@ -77,8 +77,7 @@ impl SimulatedBroker {
 
     pub fn place_order(
         &mut self,
-        order_req: OrderRequest,
-        limit_price: Option<Num>,
+        order_req: OrderRequest
     ) -> Result<String> {
         let notional_per_unit = &self.get_notional_per_unit(&order_req.asset_pair)?;
 
@@ -92,7 +91,7 @@ impl SimulatedBroker {
             Amount::Notional { notional } => notional,
         };
 
-        if limit_price.is_none() {
+        if order_req.limit_price.is_none() {
             // Market order
             return self.fill_order_immediately(
                 order_req.asset_pair,
@@ -110,7 +109,7 @@ impl SimulatedBroker {
                 order_id: order_id.clone(),
                 asset_pair: order_req.asset_pair,
                 amount: order_req.amount,
-                limit_price: limit_price.unwrap(),
+                limit_price: order_req.limit_price.unwrap(),
             }),
         );
 
@@ -332,8 +331,8 @@ mod tests {
                     amount: Amount::Quantity {
                         quantity: Num::from(10),
                     },
+                    limit_price: None,
                 },
-                None,
             )
             .unwrap_err();
 
@@ -356,8 +355,8 @@ mod tests {
                     amount: Amount::Quantity {
                         quantity: Num::from(10),
                     },
+                    limit_price: None,
                 },
-                None,
             )
             .unwrap_err();
 
@@ -372,8 +371,8 @@ mod tests {
                     amount: Amount::Quantity {
                         quantity: Num::from(10),
                     },
+                    limit_price: None,
                 },
-                None,
             )
             .unwrap_err();
 
@@ -398,8 +397,8 @@ mod tests {
                     amount: Amount::Quantity {
                         quantity: Num::from(10),
                     },
+                    limit_price: None,
                 },
-                None,
             )
             .unwrap();
 
@@ -427,8 +426,8 @@ mod tests {
                     amount: Amount::Quantity {
                         quantity: Num::from(10),
                     },
+                    limit_price: None,
                 },
-                None,
             )
             .unwrap();
 
@@ -456,8 +455,8 @@ mod tests {
                     amount: Amount::Quantity {
                         quantity: Num::from(10),
                     },
+                    limit_price: None,
                 },
-                None,
             )
             .unwrap();
 
@@ -496,8 +495,8 @@ mod tests {
                     amount: Amount::Notional {
                         notional: Num::from_str("6.55").unwrap(),
                     },
+                    limit_price: None,
                 },
-                None,
             )
             .unwrap();
 
