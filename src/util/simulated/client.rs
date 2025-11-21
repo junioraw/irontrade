@@ -2,7 +2,7 @@ use crate::api::client::IronTradeClient;
 use crate::api::common::{Amount, AssetPair, OpenPosition};
 use crate::api::request::OrderRequest;
 use crate::api::response::{
-    GetCashResponse, GetOpenPositionResponse, GetOrdersResponse, OrderResponse
+    GetCashResponse, GetOpenPositionResponse, GetOrdersResponse, OrderResponse,
 };
 use crate::util::simulated::broker::SimulatedBroker;
 use anyhow::Result;
@@ -32,6 +32,9 @@ impl IronTradeClient for SimulatedClient {
         Ok(OrderResponse { order_id })
     }
 
+    async fn buy_limit(&mut self, req: OrderRequest) -> Result<OrderResponse> {
+        todo!()
+    }
     async fn sell_market(&mut self, req: OrderRequest) -> Result<OrderResponse> {
         let req = OrderRequest {
             asset_pair: req.asset_pair,
@@ -43,9 +46,14 @@ impl IronTradeClient for SimulatedClient {
                     notional: -notional,
                 },
             },
+            limit_price: None,
         };
         let order_id = self.broker.place_order(req)?;
         Ok(OrderResponse { order_id })
+    }
+
+    async fn sell_limit(&mut self, req: OrderRequest, limit_price: Num) -> Result<OrderResponse> {
+        todo!()
     }
 
     async fn get_orders(&self) -> Result<GetOrdersResponse> {
@@ -85,6 +93,7 @@ impl IronTradeClient for SimulatedClient {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::api::common::{Order, OrderStatus, OrderType};
     use crate::util::simulated::broker::SimulatedBrokerBuilder;
     use num_decimal::Num;
     use std::str::FromStr;
@@ -102,6 +111,7 @@ mod tests {
                 amount: Amount::Notional {
                     notional: Num::from(10),
                 },
+                limit_price: None,
             })
             .await
             .unwrap()
@@ -120,6 +130,7 @@ mod tests {
                 amount: Amount::Notional {
                     notional: Num::from(10),
                 },
+                limit_price: None,
             })
             .await
             .unwrap();
@@ -129,6 +140,7 @@ mod tests {
                 amount: Amount::Notional {
                     notional: Num::from(10),
                 },
+                limit_price: None,
             })
             .await
             .unwrap()
@@ -143,29 +155,81 @@ mod tests {
 
         assert_eq!(client.get_orders().await.unwrap().orders.len(), 0);
 
-        client
+        let buy_order_id = client
             .buy_market(OrderRequest {
                 asset_pair: ten_dollars_asset_pair(),
                 amount: Amount::Notional {
                     notional: Num::from(10),
                 },
+                limit_price: None,
             })
             .await
-            .unwrap();
+            .unwrap()
+            .order_id;
 
         assert_eq!(client.get_orders().await.unwrap().orders.len(), 1);
 
-        client
+        let sell_order_id = client
             .sell_market(OrderRequest {
                 asset_pair: ten_dollars_asset_pair(),
                 amount: Amount::Notional {
                     notional: Num::from(10),
                 },
+                limit_price: None,
             })
             .await
-            .unwrap();
+            .unwrap()
+            .order_id;
 
         assert_eq!(client.get_orders().await.unwrap().orders.len(), 2);
+
+        assert_eq!(
+            client
+                .get_orders()
+                .await
+                .unwrap()
+                .orders
+                .iter()
+                .filter(|order| order.order_id == buy_order_id)
+                .map(Order::clone)
+                .last()
+                .unwrap(),
+            Order {
+                order_id: buy_order_id,
+                asset_symbol: TEN_DOLLARS_COIN_PAIR.into(),
+                amount: Amount::Quantity {
+                    quantity: Num::from(1),
+                },
+                filled_quantity: Num::from(1),
+                average_fill_price: Some(Num::from(10)),
+                status: OrderStatus::Filled,
+                type_: OrderType::Market,
+            }
+        );
+
+        assert_eq!(
+            client
+                .get_orders()
+                .await
+                .unwrap()
+                .orders
+                .iter()
+                .filter(|order| order.order_id == sell_order_id)
+                .map(Order::clone)
+                .last()
+                .unwrap(),
+            Order {
+                order_id: sell_order_id,
+                asset_symbol: TEN_DOLLARS_COIN_PAIR.into(),
+                amount: Amount::Quantity {
+                    quantity: -Num::from(1), // TODO: remove minus sign #14
+                },
+                filled_quantity: -Num::from(1), // TODO: remove minus sign #14
+                average_fill_price: Some(Num::from(10)),
+                status: OrderStatus::Filled,
+                type_: OrderType::Market,
+            }
+        );
     }
 
     #[tokio::test]
@@ -180,6 +244,7 @@ mod tests {
                 amount: Amount::Notional {
                     notional: Num::from(10),
                 },
+                limit_price: None,
             })
             .await
             .unwrap();
@@ -192,6 +257,7 @@ mod tests {
                 amount: Amount::Notional {
                     notional: Num::from(5),
                 },
+                limit_price: None,
             })
             .await
             .unwrap();
@@ -223,6 +289,7 @@ mod tests {
                 amount: Amount::Notional {
                     notional: Num::from(15),
                 },
+                limit_price: None,
             })
             .await
             .unwrap();
@@ -247,6 +314,7 @@ mod tests {
                 amount: Amount::Notional {
                     notional: Num::from(10),
                 },
+                limit_price: None,
             })
             .await
             .unwrap();
