@@ -5,33 +5,19 @@ use crate::api::response::{
     GetCashResponse, GetOpenPositionResponse, GetOrdersResponse, OrderResponse,
 };
 use anyhow::Result;
-use num_decimal::Num;
 
 /// A trait for instances of a trading client, which allows operations with the underlying trading broker.
 pub trait IronTradeClient {
-    /// Places a market buy order. If successful returns the order id of the newly placed order.
-    fn buy_market(
+    /// Places an order. If successful returns the order id of the newly placed order.
+    fn buy(
         &mut self,
         req: OrderRequest,
     ) -> impl Future<Output = Result<OrderResponse>> + Send;
 
-    /// Places a limit buy order. If successful returns the order id of the newly placed order.
-    fn buy_limit(
+    /// Places a sell order. If successful returns the order of the newly placed order.
+    fn sell(
         &mut self,
         req: OrderRequest,
-    ) -> impl Future<Output = Result<OrderResponse>> + Send;
-
-    /// Places a market sell order. If successful returns the order of the newly placed order.
-    fn sell_market(
-        &mut self,
-        req: OrderRequest,
-    ) -> impl Future<Output = Result<OrderResponse>> + Send;
-
-    /// /// Places a limit sell order. If successful returns the order id of the newly placed order.
-    fn sell_limit(
-        &mut self,
-        req: OrderRequest,
-        limit_price: Num,
     ) -> impl Future<Output = Result<OrderResponse>> + Send;
 
     /// Returns all placed orders regardless of status.
