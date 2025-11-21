@@ -28,7 +28,7 @@ impl SimulatedClient {
 
 impl IronTradeClient for SimulatedClient {
     async fn buy_market(&mut self, req: OrderRequest) -> Result<OrderResponse> {
-        let order_id = self.broker.place_order(req)?;
+        let order_id = self.broker.place_order(req, None)?;
         Ok(OrderResponse { order_id })
     }
 
@@ -47,7 +47,7 @@ impl IronTradeClient for SimulatedClient {
                 },
             },
         };
-        let order_id = self.broker.place_order(req)?;
+        let order_id = self.broker.place_order(req, None)?;
         Ok(OrderResponse { order_id })
     }
 

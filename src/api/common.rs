@@ -31,12 +31,14 @@ pub enum OrderStatus {
     Unimplemented,
 }
 
+#[derive(Hash, PartialEq, Eq, Debug, Clone)]
 pub enum OrderType {
     Market,
     Limit,
 }
 
 /// Enum representing different value types, can either be a quantity or a notional value.
+#[derive(Hash, PartialEq, Eq, Debug, Clone)]
 pub enum Amount {
     /// Quantity, usually amount of non-notional assets.
     Quantity { quantity: Num },
