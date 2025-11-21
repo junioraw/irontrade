@@ -285,7 +285,7 @@ impl From<FilledOrder> for Order {
                 quantity: order.filled_amount.quantity.clone(),
             },
             filled_quantity: order.filled_amount.quantity.clone(),
-            average_fill_price: Some(order.filled_amount.quantity / order.filled_amount.notional),
+            average_fill_price: Some(order.filled_amount.notional / order.filled_amount.quantity),
             status: OrderStatus::Filled,
             type_: order.order_type,
         }

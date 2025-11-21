@@ -5,6 +5,7 @@ use std::fmt::{Display, Formatter};
 use std::str::FromStr;
 use std::string::ParseError;
 
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Order {
     pub order_id: String,
     pub asset_symbol: String,
@@ -23,6 +24,7 @@ pub struct OpenPosition {
     pub market_value: Option<Num>,
 }
 
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum OrderStatus {
     New,
     PartiallyFilled,
