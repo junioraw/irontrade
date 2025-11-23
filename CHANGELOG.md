@@ -1,6 +1,16 @@
+0.1.11
+----
+- Replace `Client.buy_market`, and `Client.sell_market` with `Client.place_order` which now also supports limit orders
+- Add `limit_price` to `Order` and `OrderRequest`
+- Add `OrderSide` to `Order` and `OrderRequest`
+- Add limit order support to `SimulatedClient`
+- Move `OpenPosition`, `Order`, `OrderStatus` and `OrderType` to `api::common`
+- Add `OrderSide` to `api::common`
+- Copy `README.md` documentation to top level crate documentation
+
 0.1.10
 ----
-- Add set_notional_per_unit to SimulatedClient
+- Add `set_notional_per_unit` to `SimulatedClient`
 
 0.1.9
 ----
