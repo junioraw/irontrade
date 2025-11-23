@@ -30,7 +30,7 @@ impl IronTradeClient for SimulatedClient {
     }
 
     async fn buy(&mut self, req: OrderRequestV1) -> Result<OrderResponse> {
-        let order_id = self.broker.place_order(req)?;
+        let order_id = self.broker.place_order_v1(req)?;
         Ok(OrderResponse { order_id })
     }
 
@@ -47,7 +47,7 @@ impl IronTradeClient for SimulatedClient {
             },
             limit_price: None,
         };
-        let order_id = self.broker.place_order(req)?;
+        let order_id = self.broker.place_order_v1(req)?;
         Ok(OrderResponse { order_id })
     }
 
