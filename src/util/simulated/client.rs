@@ -86,7 +86,7 @@ impl IronTradeClient for SimulatedClient {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::api::common::{Order, OrderStatus, OrderType};
+    use crate::api::common::{OrderV1, OrderStatus, OrderType};
     use crate::util::simulated::broker::SimulatedBrokerBuilder;
     use num_decimal::Num;
     use std::str::FromStr;
@@ -184,10 +184,10 @@ mod tests {
                 .orders
                 .iter()
                 .filter(|order| order.order_id == buy_order_id)
-                .map(Order::clone)
+                .map(OrderV1::clone)
                 .last()
                 .unwrap(),
-            Order {
+            OrderV1 {
                 order_id: buy_order_id,
                 asset_symbol: TEN_DOLLARS_COIN_PAIR.into(),
                 amount: Amount::Quantity {
@@ -208,10 +208,10 @@ mod tests {
                 .orders
                 .iter()
                 .filter(|order| order.order_id == sell_order_id)
-                .map(Order::clone)
+                .map(OrderV1::clone)
                 .last()
                 .unwrap(),
-            Order {
+            OrderV1 {
                 order_id: sell_order_id,
                 asset_symbol: TEN_DOLLARS_COIN_PAIR.into(),
                 amount: Amount::Quantity {
