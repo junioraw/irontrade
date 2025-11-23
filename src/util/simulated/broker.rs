@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-use crate::api::common::{Amount, AssetPair, Order, OrderSide, OrderStatus, OrderType, OrderV1};
-use crate::api::request::{OrderRequest, OrderRequestV1};
-use anyhow::{Result, format_err};
+use crate::api::common::{Amount, AssetPair, Order, OrderSide, OrderStatus, OrderType};
+use crate::api::request::OrderRequest;
+use anyhow::{format_err, Result};
 use num_decimal::Num;
 use std::collections::{HashMap, HashSet};
 use uuid::Uuid;
@@ -11,7 +11,6 @@ use uuid::Uuid;
 pub struct SimulatedBroker {
     currency: String,
     notional_assets: HashSet<String>,
-    orders_v1: HashMap<String, BrokerOrder>,
     orders: HashMap<String, Order>,
     notional_per_unit: HashMap<AssetPair, Num>,
     balances: HashMap<String, Num>,
@@ -70,7 +69,6 @@ impl SimulatedBroker {
         Ok(Self {
             currency: currency.into(),
             notional_assets,
-            orders_v1: HashMap::new(),
             orders: HashMap::new(),
             notional_per_unit: HashMap::new(),
             balances: starting_balances.clone(),
@@ -101,44 +99,6 @@ impl SimulatedBroker {
                 type_: OrderType::Limit,
                 side: order_req.side,
             },
-        );
-
-        Ok(order_id)
-    }
-
-    pub fn place_order_v1(&mut self, order_req: OrderRequestV1) -> Result<String> {
-        let notional_per_unit = &self.get_notional_per_unit(&order_req.asset_pair)?;
-
-        let quantity: &Num = match &order_req.amount {
-            Amount::Quantity { quantity } => quantity,
-            Amount::Notional { notional } => &(notional / notional_per_unit),
-        };
-
-        let notional: &Num = match &order_req.amount {
-            Amount::Quantity { quantity } => &(quantity * notional_per_unit),
-            Amount::Notional { notional } => notional,
-        };
-
-        if order_req.limit_price.is_none() {
-            // Market order
-            return self.fill_v1_order_immediately(
-                order_req.asset_pair,
-                quantity,
-                notional,
-                OrderType::Market,
-            );
-        }
-
-        let order_id = Uuid::new_v4().to_string();
-
-        self.orders_v1.insert(
-            order_id.clone(),
-            BrokerOrder::PendingOrder(PendingOrder {
-                order_id: order_id.clone(),
-                asset_pair: order_req.asset_pair,
-                amount: order_req.amount,
-                limit_price: order_req.limit_price.unwrap(),
-            }),
         );
 
         Ok(order_id)
@@ -214,83 +174,14 @@ impl SimulatedBroker {
         Ok(order_id)
     }
 
-    fn fill_v1_order_immediately(
-        &mut self,
-        asset_pair: AssetPair,
-        quantity: &Num,
-        notional: &Num,
-        order_type: OrderType,
-    ) -> Result<String> {
-        let notional_asset = &asset_pair.notional_asset;
-        let quantity_asset = &asset_pair.quantity_asset;
-
-        let balance_err_asset;
-
-        if quantity >= &Num::from(0) {
-            // Buying
-            let balance = &self.get_balance(notional_asset);
-            if balance < notional {
-                balance_err_asset = Some(notional_asset);
-            } else {
-                balance_err_asset = None;
-            }
-        } else {
-            // Selling
-            let balance = self.get_balance(quantity_asset);
-            if balance < -quantity {
-                balance_err_asset = Some(quantity_asset);
-            } else {
-                balance_err_asset = None;
-            }
-        }
-
-        if let Some(balance_err_asset) = balance_err_asset {
-            return Err(format_err!(
-                "Not enough {} balance to place the order",
-                balance_err_asset
-            ));
-        }
-
-        self.update_balance(notional_asset, -notional);
-        self.update_balance(quantity_asset, quantity.clone());
-
-        let order_id = Uuid::new_v4().to_string();
-
-        self.orders_v1.insert(
-            order_id.clone(),
-            BrokerOrder::FilledOrder(FilledOrder {
-                order_id: order_id.clone(),
-                asset_pair,
-                filled_amount: FilledAmount {
-                    quantity: quantity.clone(),
-                    notional: notional.clone(),
-                },
-                order_type,
-            }),
-        );
-
-        Ok(order_id)
-    }
-
     pub fn get_orders(&self) -> Vec<Order> {
         self.orders.values().cloned().collect()
-    }
-
-    pub fn get_orders_v1(&self) -> Vec<BrokerOrder> {
-        self.orders_v1.values().cloned().collect()
     }
 
     pub fn get_order(&self, order_id: &String) -> Result<Order> {
         self.orders
             .get(order_id)
             .map(Order::clone)
-            .ok_or(format_err!("Order with id {} doesn't exist", order_id))
-    }
-
-    pub fn get_order_v1(&self, order_id: &String) -> Result<BrokerOrder> {
-        self.orders_v1
-            .get(order_id)
-            .map(BrokerOrder::clone)
             .ok_or(format_err!("Order with id {} doesn't exist", order_id))
     }
 
@@ -342,73 +233,6 @@ impl SimulatedBroker {
             .unwrap_or(Num::from(0));
         self.balances.insert(asset.into(), previous_balance + delta);
     }
-}
-
-#[derive(Hash, PartialEq, Eq, Clone, Debug)]
-pub enum BrokerOrder {
-    FilledOrder(FilledOrder),
-    PendingOrder(PendingOrder),
-}
-
-impl From<BrokerOrder> for OrderV1 {
-    fn from(order: BrokerOrder) -> Self {
-        match order {
-            BrokerOrder::FilledOrder(order) => order.into(),
-            BrokerOrder::PendingOrder(order) => order.into(),
-        }
-    }
-}
-
-#[derive(Hash, PartialEq, Eq, Clone, Debug)]
-pub struct FilledOrder {
-    pub order_id: String,
-    pub asset_pair: AssetPair,
-    pub filled_amount: FilledAmount,
-    pub order_type: OrderType,
-}
-
-#[derive(Hash, PartialEq, Eq, Clone, Debug)]
-pub struct PendingOrder {
-    pub order_id: String,
-    pub asset_pair: AssetPair,
-    pub amount: Amount,
-    pub limit_price: Num,
-}
-
-impl From<FilledOrder> for OrderV1 {
-    fn from(order: FilledOrder) -> Self {
-        Self {
-            order_id: order.order_id,
-            asset_symbol: order.asset_pair.to_string(),
-            amount: Amount::Quantity {
-                quantity: order.filled_amount.quantity.clone(),
-            },
-            filled_quantity: order.filled_amount.quantity.clone(),
-            average_fill_price: Some(order.filled_amount.notional / order.filled_amount.quantity),
-            status: OrderStatus::Filled,
-            type_: order.order_type,
-        }
-    }
-}
-
-impl From<PendingOrder> for OrderV1 {
-    fn from(order: PendingOrder) -> Self {
-        Self {
-            order_id: order.order_id,
-            asset_symbol: order.asset_pair.to_string(),
-            amount: order.amount,
-            filled_quantity: Num::from(0),
-            average_fill_price: None,
-            status: OrderStatus::New,
-            type_: OrderType::Limit,
-        }
-    }
-}
-
-#[derive(Hash, PartialEq, Eq, Clone, Debug)]
-pub struct FilledAmount {
-    pub quantity: Num,
-    pub notional: Num,
 }
 
 #[cfg(test)]
