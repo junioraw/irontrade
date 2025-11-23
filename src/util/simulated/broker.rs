@@ -2,9 +2,10 @@
 
 use crate::api::common::{Amount, AssetPair, Order, OrderSide, OrderStatus, OrderType};
 use crate::api::request::OrderRequest;
-use anyhow::{format_err, Result};
+use anyhow::{Result, format_err};
 use num_decimal::Num;
 use std::collections::{HashMap, HashSet};
+use std::str::FromStr;
 use uuid::Uuid;
 
 #[derive(Debug)]
@@ -76,17 +77,19 @@ impl SimulatedBroker {
     }
 
     pub fn place_order(&mut self, order_req: OrderRequest) -> Result<String> {
+        let order_id = Uuid::new_v4().to_string();
+
         if order_req.limit_price.is_none() {
-            return self.fill_order_immediately(
+            self.fill_order_immediately(
+                &order_id,
                 &order_req.asset_pair,
                 order_req.amount,
                 OrderType::Market,
                 order_req.side,
                 None,
-            );
+            )?;
+            return Ok(order_id);
         }
-
-        let order_id = Uuid::new_v4().to_string();
 
         self.orders.insert(
             order_id.clone(),
@@ -103,17 +106,42 @@ impl SimulatedBroker {
             },
         );
 
+        self.maybe_update_order(&order_id)?;
+
         Ok(order_id)
+    }
+
+    fn maybe_update_order(&mut self, order_id: &String) -> Result<()> {
+        let order = self.orders.get(order_id).unwrap().clone();
+        let asset_pair = &AssetPair::from_str(&order.asset_symbol)?;
+        let current_price = &self.get_notional_per_unit(asset_pair)?;
+        let limit_price = &order.limit_price.clone().unwrap();
+
+        if current_price == limit_price
+            || ((order.side == OrderSide::Buy) == (current_price < limit_price))
+        {
+            self.fill_order_immediately(
+                &order.order_id,
+                asset_pair,
+                order.amount,
+                order.type_,
+                order.side,
+                order.limit_price,
+            )?;
+        }
+
+        Ok(())
     }
 
     fn fill_order_immediately(
         &mut self,
+        order_id: &String,
         asset_pair: &AssetPair,
         amount: Amount,
         order_type: OrderType,
         order_side: OrderSide,
         limit_price: Option<Num>,
-    ) -> Result<String> {
+    ) -> Result<()> {
         let notional_per_unit = &self.get_notional_per_unit(asset_pair)?;
 
         let notional_asset = &asset_pair.notional_asset;
@@ -158,8 +186,6 @@ impl SimulatedBroker {
             ));
         }
 
-        let order_id = Uuid::new_v4().to_string();
-
         self.orders.insert(
             order_id.clone(),
             Order {
@@ -175,7 +201,7 @@ impl SimulatedBroker {
             },
         );
 
-        Ok(order_id)
+        Ok(())
     }
 
     pub fn get_orders(&self) -> Vec<Order> {
@@ -216,6 +242,12 @@ impl SimulatedBroker {
         self.check_notional(&asset_pair)?;
         self.notional_per_unit
             .insert(asset_pair.clone(), notional_per_unit.clone());
+
+        let order_ids: HashSet<String> = self.orders.keys().cloned().collect();
+        for order_id in order_ids {
+            self.maybe_update_order(&order_id)?
+        }
+
         Ok(())
     }
 
