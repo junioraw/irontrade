@@ -435,18 +435,19 @@ mod tests {
     fn place_order_no_balance() {
         let mut broker = SimulatedBrokerBuilder::new("USD").build();
 
-        let _ = broker.set_notional_per_unit(
+        broker.set_notional_per_unit(
             AssetPair::from_str("GBP/USD").unwrap(),
             Num::from_str("1.31").unwrap(),
-        );
+        ).unwrap();
 
         let err = broker
-            .place_order_v1(OrderRequestV1 {
+            .place_order(OrderRequest {
                 asset_pair: AssetPair::from_str("GBP/USD").unwrap(),
                 amount: Amount::Quantity {
                     quantity: Num::from(10),
                 },
                 limit_price: None,
+                side: OrderSide::Buy,
             })
             .unwrap_err();
 
@@ -455,12 +456,13 @@ mod tests {
         broker.update_balance("USD", Num::from_str("13.09").unwrap());
 
         let err = broker
-            .place_order_v1(OrderRequestV1 {
+            .place_order(OrderRequest {
                 asset_pair: AssetPair::from_str("GBP/USD").unwrap(),
                 amount: Amount::Quantity {
                     quantity: Num::from(10),
                 },
                 limit_price: None,
+                side: OrderSide::Buy,
             })
             .unwrap_err();
 
