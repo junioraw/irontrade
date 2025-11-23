@@ -7,10 +7,6 @@ pub struct OrderResponse {
     pub order_id: String,
 }
 
-pub struct GetOrdersResponseV1 {
-    pub orders: Vec<OrderV1>,
-}
-
 pub struct GetOrdersResponse {
     pub orders: Vec<Order>,
 }

@@ -1,8 +1,8 @@
 use crate::api::client::IronTradeClient;
-use crate::api::common::{Amount, AssetPair, OpenPosition};
-use crate::api::request::{OrderRequest, OrderRequestV1};
+use crate::api::common::{AssetPair, OpenPosition};
+use crate::api::request::OrderRequest;
 use crate::api::response::{
-    GetCashResponse, GetOpenPositionResponse, GetOrdersResponse, GetOrdersResponseV1, OrderResponse,
+    GetCashResponse, GetOpenPositionResponse, GetOrdersResponse, OrderResponse,
 };
 use crate::util::simulated::broker::SimulatedBroker;
 use anyhow::Result;
@@ -30,18 +30,6 @@ impl IronTradeClient for SimulatedClient {
     async fn place_order(&mut self, req: OrderRequest) -> Result<OrderResponse> {
         let order_id = self.broker.place_order(req)?;
         Ok(OrderResponse { order_id })
-    }
-
-    async fn buy(&mut self, req: OrderRequestV1) -> Result<OrderResponse> {
-        unimplemented!("To be removed")
-    }
-
-    async fn sell(&mut self, req: OrderRequestV1) -> Result<OrderResponse> {
-        unimplemented!("To be removed")
-    }
-
-    async fn get_orders_v1(&self) -> Result<GetOrdersResponseV1> {
-        unimplemented!("To be removed")
     }
 
     async fn get_orders(&self) -> Result<GetOrdersResponse> {
@@ -76,7 +64,7 @@ impl IronTradeClient for SimulatedClient {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::api::common::{Order, OrderSide, OrderStatus, OrderType, OrderV1};
+    use crate::api::common::{Amount, Order, OrderSide, OrderStatus, OrderType};
     use crate::util::simulated::broker::SimulatedBrokerBuilder;
     use num_decimal::Num;
     use std::str::FromStr;
