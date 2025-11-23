@@ -6,17 +6,6 @@ use std::str::FromStr;
 use std::string::ParseError;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
-pub struct OrderV1 {
-    pub order_id: String,
-    pub asset_symbol: String,
-    pub amount: Amount,
-    pub filled_quantity: Num,
-    pub average_fill_price: Option<Num>,
-    pub status: OrderStatus,
-    pub type_: OrderType,
-}
-
-#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Order {
     pub order_id: String,
     pub asset_symbol: String,
