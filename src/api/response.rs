@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 use num_decimal::Num;
-use crate::api::common::{OpenPosition, Order, OrderV1};
+use crate::api::common::{OpenPosition, Order};
 
 pub struct OrderResponse {
     pub order_id: String,
