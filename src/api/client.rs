@@ -8,7 +8,7 @@ use anyhow::Result;
 
 /// A trait for instances of a trading client, which allows operations with the underlying trading broker.
 pub trait IronTradeClient {
-    /// Places an order. If successful returns the order id of the newly placed order.
+    /// Places a buy order. If successful returns the order id of the newly placed order.
     fn buy(
         &mut self,
         req: OrderRequest,
