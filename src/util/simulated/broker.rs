@@ -452,6 +452,16 @@ mod tests {
             .unwrap_err();
 
         assert_eq!(err.to_string(), "Not enough USD balance to place the order");
+    }
+
+    #[test]
+    fn place_order_close_but_not_enough_balance() {
+        let mut broker = SimulatedBrokerBuilder::new("USD").build();
+
+        broker.set_notional_per_unit(
+            AssetPair::from_str("GBP/USD").unwrap(),
+            Num::from_str("1.31").unwrap(),
+        ).unwrap();
 
         broker.update_balance("USD", Num::from_str("13.09").unwrap());
 
