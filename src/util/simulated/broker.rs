@@ -267,11 +267,22 @@ impl SimulatedBroker {
         Ok(order_id)
     }
 
-    pub fn get_orders(&self) -> Vec<BrokerOrder> {
+    pub fn get_orders(&self) -> Vec<Order> {
+        self.orders.values().cloned().collect()
+    }
+
+    pub fn get_orders_v1(&self) -> Vec<BrokerOrder> {
         self.orders_v1.values().cloned().collect()
     }
 
-    pub fn get_order(&self, order_id: &String) -> Result<BrokerOrder> {
+    pub fn get_order(&self, order_id: &String) -> Result<Order> {
+        self.orders
+            .get(order_id)
+            .map(Order::clone)
+            .ok_or(format_err!("Order with id {} doesn't exist", order_id))
+    }
+
+    pub fn get_order_v1(&self, order_id: &String) -> Result<BrokerOrder> {
         self.orders_v1
             .get(order_id)
             .map(BrokerOrder::clone)
@@ -491,12 +502,13 @@ mod tests {
         );
 
         broker
-            .place_order_v1(OrderRequestV1 {
+            .place_order(OrderRequest {
                 asset_pair: AssetPair::from_str("GBP/USD").unwrap(),
                 amount: Amount::Quantity {
                     quantity: Num::from(10),
                 },
                 limit_price: None,
+                side: OrderSide::Buy,
             })
             .unwrap();
 
@@ -527,7 +539,7 @@ mod tests {
             })
             .unwrap();
 
-        let order = broker.get_order(&order_id).unwrap();
+        let order = broker.get_order_v1(&order_id).unwrap();
         assert_eq!(order.order_id(), order_id);
     }
 
@@ -554,7 +566,7 @@ mod tests {
             })
             .unwrap();
 
-        let order = broker.get_order(&order_id).unwrap();
+        let order = broker.get_order_v1(&order_id).unwrap();
         assert_eq!(
             order,
             BrokerOrder::FilledOrder(FilledOrder {
@@ -592,7 +604,7 @@ mod tests {
             })
             .unwrap();
 
-        let order = broker.get_order(&order_id).unwrap();
+        let order = broker.get_order_v1(&order_id).unwrap();
         assert_eq!(
             order,
             BrokerOrder::FilledOrder(FilledOrder {
