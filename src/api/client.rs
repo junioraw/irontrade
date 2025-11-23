@@ -2,7 +2,7 @@
 
 use crate::api::request::OrderRequestV1;
 use crate::api::response::{
-    GetCashResponse, GetOpenPositionResponse, GetOrdersResponse, OrderResponse,
+    GetCashResponse, GetOpenPositionResponse, GetOrdersResponseV1, OrderResponse,
 };
 use anyhow::Result;
 
@@ -21,7 +21,7 @@ pub trait IronTradeClient {
     ) -> impl Future<Output = Result<OrderResponse>> + Send;
 
     /// Returns all placed orders regardless of status.
-    fn get_orders(&self) -> impl Future<Output = Result<GetOrdersResponse>> + Send;
+    fn get_orders(&self) -> impl Future<Output = Result<GetOrdersResponseV1>> + Send;
 
     /// Returns the current cash balance, more specifically the balance of the currency
     /// that is not tied to any order or open position.
