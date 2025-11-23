@@ -405,7 +405,7 @@ mod tests {
     }
 
     #[test]
-    fn get_order_based() {
+    fn get_market_order() {
         let mut broker = SimulatedBrokerBuilder::new("USD")
             .set_balance(Num::from_str("14.1").unwrap())
             .build();
@@ -442,6 +442,117 @@ mod tests {
                 average_fill_price: Some(Num::from_str("1.31").unwrap()),
                 status: OrderStatus::Filled,
                 type_: OrderType::Market,
+                side: OrderSide::Buy,
+            }
+        );
+    }
+
+    #[test]
+    fn get_updated_limit_order() {
+        let mut broker = SimulatedBrokerBuilder::new("USD")
+            .set_balance(Num::from_str("14.1").unwrap())
+            .build();
+
+        broker
+            .set_notional_per_unit(
+                AssetPair::from_str("GBP/USD").unwrap(),
+                Num::from_str("1.31").unwrap(),
+            )
+            .unwrap();
+
+        let order_id = broker
+            .place_order(OrderRequest {
+                asset_pair: AssetPair::from_str("GBP/USD").unwrap(),
+                amount: Amount::Quantity {
+                    quantity: Num::from(10),
+                },
+                limit_price: Some(Num::from_str("1.3").unwrap()),
+                side: OrderSide::Buy,
+            })
+            .unwrap();
+
+        let order = broker.get_order(&order_id).unwrap();
+        assert_eq!(
+            order,
+            Order {
+                order_id: order_id.clone(),
+                asset_symbol: "GBP/USD".into(),
+                amount: Amount::Quantity {
+                    quantity: Num::from(10),
+                },
+                limit_price: Some(Num::from_str("1.3").unwrap()),
+                filled_quantity: Num::from(0),
+                average_fill_price: None,
+                status: OrderStatus::New,
+                type_: OrderType::Limit,
+                side: OrderSide::Buy,
+            }
+        );
+
+        broker
+            .set_notional_per_unit(
+                AssetPair::from_str("GBP/USD").unwrap(),
+                Num::from_str("1.29").unwrap(),
+            )
+            .unwrap();
+
+        let order = broker.get_order(&order_id).unwrap();
+        assert_eq!(
+            order,
+            Order {
+                order_id,
+                asset_symbol: "GBP/USD".into(),
+                amount: Amount::Quantity {
+                    quantity: Num::from(10),
+                },
+                limit_price: Some(Num::from_str("1.3").unwrap()),
+                filled_quantity: Num::from(10),
+                average_fill_price: Some(Num::from_str("1.29").unwrap()),
+                status: OrderStatus::Filled,
+                type_: OrderType::Limit,
+                side: OrderSide::Buy,
+            }
+        );
+    }
+
+    #[test]
+    fn get_filled_limit_order() {
+        let mut broker = SimulatedBrokerBuilder::new("USD")
+            .set_balance(Num::from_str("14.1").unwrap())
+            .build();
+
+        broker
+            .set_notional_per_unit(
+                AssetPair::from_str("GBP/USD").unwrap(),
+                Num::from_str("1.31").unwrap(),
+            )
+            .unwrap();
+
+        let order_id = broker
+            .place_order(OrderRequest {
+                asset_pair: AssetPair::from_str("GBP/USD").unwrap(),
+                amount: Amount::Quantity {
+                    quantity: Num::from(10),
+                },
+                limit_price: Some(Num::from(2)),
+                side: OrderSide::Buy,
+            })
+            .unwrap();
+
+        let order = broker.get_order(&order_id).unwrap();
+        assert_eq!(
+            order,
+            Order {
+                order_id,
+                asset_symbol: "GBP/USD".into(),
+                amount: Amount::Quantity {
+                    quantity: Num::from(10),
+                },
+                limit_price: Some(Num::from(2)),
+                filled_quantity: Num::from(10),
+                average_fill_price: Some(Num::from_str("1.31").unwrap()),
+                status: OrderStatus::Filled,
+                type_: OrderType::Limit,
                 side: OrderSide::Buy,
             }
         );
