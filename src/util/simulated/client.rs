@@ -176,6 +176,7 @@ mod tests {
                 amount: Amount::Notional {
                     notional: Num::from(10),
                 },
+                limit_price: None,
                 filled_quantity: Num::from(1),
                 average_fill_price: Some(Num::from(10)),
                 status: OrderStatus::Filled,
@@ -201,6 +202,7 @@ mod tests {
                 amount: Amount::Notional {
                     notional: Num::from(10),
                 },
+                limit_price: None,
                 filled_quantity: Num::from(1), // TODO: remove minus sign #14
                 average_fill_price: Some(Num::from(10)),
                 status: OrderStatus::Filled,
