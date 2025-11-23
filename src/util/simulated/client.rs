@@ -33,36 +33,15 @@ impl IronTradeClient for SimulatedClient {
     }
 
     async fn buy(&mut self, req: OrderRequestV1) -> Result<OrderResponse> {
-        let order_id = self.broker.place_order_v1(req)?;
-        Ok(OrderResponse { order_id })
+        unimplemented!("To be removed")
     }
 
     async fn sell(&mut self, req: OrderRequestV1) -> Result<OrderResponse> {
-        let req = OrderRequestV1 {
-            asset_pair: req.asset_pair,
-            amount: match req.amount {
-                Amount::Quantity { quantity } => Amount::Quantity {
-                    quantity: -quantity,
-                },
-                Amount::Notional { notional } => Amount::Notional {
-                    notional: -notional,
-                },
-            },
-            limit_price: None,
-        };
-        let order_id = self.broker.place_order_v1(req)?;
-        Ok(OrderResponse { order_id })
+        unimplemented!("To be removed")
     }
 
     async fn get_orders_v1(&self) -> Result<GetOrdersResponseV1> {
-        Ok(GetOrdersResponseV1 {
-            orders: self
-                .broker
-                .get_orders_v1()
-                .iter()
-                .map(|order| order.clone().into())
-                .collect(),
-        })
+        unimplemented!("To be removed")
     }
 
     async fn get_orders(&self) -> Result<GetOrdersResponse> {
