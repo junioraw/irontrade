@@ -3,7 +3,7 @@
 use num_decimal::Num;
 use crate::api::common::{Amount, AssetPair};
 
-pub struct OrderRequest {
+pub struct OrderRequestV1 {
     pub asset_pair: AssetPair,
     pub amount: Amount,
     pub limit_price: Option<Num>

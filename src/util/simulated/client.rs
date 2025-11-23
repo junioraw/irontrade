@@ -1,6 +1,6 @@
 use crate::api::client::IronTradeClient;
 use crate::api::common::{Amount, AssetPair, OpenPosition};
-use crate::api::request::OrderRequest;
+use crate::api::request::OrderRequestV1;
 use crate::api::response::{
     GetCashResponse, GetOpenPositionResponse, GetOrdersResponse, OrderResponse,
 };
@@ -27,13 +27,13 @@ impl SimulatedClient {
 }
 
 impl IronTradeClient for SimulatedClient {
-    async fn buy(&mut self, req: OrderRequest) -> Result<OrderResponse> {
+    async fn buy(&mut self, req: OrderRequestV1) -> Result<OrderResponse> {
         let order_id = self.broker.place_order(req)?;
         Ok(OrderResponse { order_id })
     }
 
-    async fn sell(&mut self, req: OrderRequest) -> Result<OrderResponse> {
-        let req = OrderRequest {
+    async fn sell(&mut self, req: OrderRequestV1) -> Result<OrderResponse> {
+        let req = OrderRequestV1 {
             asset_pair: req.asset_pair,
             amount: match req.amount {
                 Amount::Quantity { quantity } => Amount::Quantity {
@@ -99,7 +99,7 @@ mod tests {
         let mut client = create_client();
 
         let order_id = client
-            .buy(OrderRequest {
+            .buy(OrderRequestV1 {
                 asset_pair: ten_dollars_asset_pair(),
                 amount: Amount::Notional {
                     notional: Num::from(10),
@@ -118,7 +118,7 @@ mod tests {
         let mut client = create_client();
 
         client
-            .buy(OrderRequest {
+            .buy(OrderRequestV1 {
                 asset_pair: ten_dollars_asset_pair(),
                 amount: Amount::Notional {
                     notional: Num::from(10),
@@ -128,7 +128,7 @@ mod tests {
             .await
             .unwrap();
         let order_id = client
-            .sell(OrderRequest {
+            .sell(OrderRequestV1 {
                 asset_pair: ten_dollars_asset_pair(),
                 amount: Amount::Notional {
                     notional: Num::from(10),
@@ -149,7 +149,7 @@ mod tests {
         assert_eq!(client.get_orders().await.unwrap().orders.len(), 0);
 
         let buy_order_id = client
-            .buy(OrderRequest {
+            .buy(OrderRequestV1 {
                 asset_pair: ten_dollars_asset_pair(),
                 amount: Amount::Notional {
                     notional: Num::from(10),
@@ -163,7 +163,7 @@ mod tests {
         assert_eq!(client.get_orders().await.unwrap().orders.len(), 1);
 
         let sell_order_id = client
-            .sell(OrderRequest {
+            .sell(OrderRequestV1 {
                 asset_pair: ten_dollars_asset_pair(),
                 amount: Amount::Notional {
                     notional: Num::from(10),
@@ -232,7 +232,7 @@ mod tests {
         assert_eq!(client.get_cash().await.unwrap().cash, Num::from(1000));
 
         client
-            .buy(OrderRequest {
+            .buy(OrderRequestV1 {
                 asset_pair: ten_dollars_asset_pair(),
                 amount: Amount::Notional {
                     notional: Num::from(10),
@@ -245,7 +245,7 @@ mod tests {
         assert_eq!(client.get_cash().await.unwrap().cash, Num::from(990));
 
         client
-            .sell(OrderRequest {
+            .sell(OrderRequestV1 {
                 asset_pair: ten_dollars_asset_pair(),
                 amount: Amount::Notional {
                     notional: Num::from(5),
@@ -277,7 +277,7 @@ mod tests {
         );
 
         client
-            .buy(OrderRequest {
+            .buy(OrderRequestV1 {
                 asset_pair: ten_dollars_asset_pair(),
                 amount: Amount::Notional {
                     notional: Num::from(15),
@@ -302,7 +302,7 @@ mod tests {
         );
 
         client
-            .sell(OrderRequest {
+            .sell(OrderRequestV1 {
                 asset_pair: ten_dollars_asset_pair(),
                 amount: Amount::Notional {
                     notional: Num::from(10),
