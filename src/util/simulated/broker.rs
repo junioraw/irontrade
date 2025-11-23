@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-use crate::api::common::{Amount, AssetPair, Order, OrderStatus, OrderType};
+use crate::api::common::{Amount, AssetPair, OrderV1, OrderStatus, OrderType};
 use crate::api::request::OrderRequestV1;
 use anyhow::{Result, format_err};
 use num_decimal::Num;
@@ -250,7 +250,7 @@ impl BrokerOrder {
     }
 }
 
-impl From<BrokerOrder> for Order {
+impl From<BrokerOrder> for OrderV1 {
     fn from(order: BrokerOrder) -> Self {
         match order {
             BrokerOrder::FilledOrder(order) => order.into(),
@@ -275,7 +275,7 @@ pub struct PendingOrder {
     pub limit_price: Num,
 }
 
-impl From<FilledOrder> for Order {
+impl From<FilledOrder> for OrderV1 {
     fn from(order: FilledOrder) -> Self {
         Self {
             order_id: order.order_id,
@@ -291,7 +291,7 @@ impl From<FilledOrder> for Order {
     }
 }
 
-impl From<PendingOrder> for Order {
+impl From<PendingOrder> for OrderV1 {
     fn from(order: PendingOrder) -> Self {
         Self {
             order_id: order.order_id,
