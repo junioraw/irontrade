@@ -39,6 +39,11 @@ pub enum OrderType {
     Limit,
 }
 
+pub enum OrderSide {
+    Buy,
+    Sell,
+}
+
 /// Enum representing different value types, can either be a quantity or a notional value.
 #[derive(Hash, PartialEq, Eq, Debug, Clone)]
 pub enum Amount {
