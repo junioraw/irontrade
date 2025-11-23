@@ -89,6 +89,17 @@ impl SimulatedBroker {
 
         let order_id = Uuid::new_v4().to_string();
 
+        self.orders.insert(order_id.clone(), Order {
+            order_id: order_id.clone(),
+            asset_symbol: order_req.asset_pair.to_string(),
+            amount: order_req.amount,
+            filled_quantity: Num::from(0),
+            average_fill_price: None,
+            status: OrderStatus::New,
+            type_: OrderType::Limit,
+            side: order_req.side,
+        });
+
         Ok(order_id)
     }
 
