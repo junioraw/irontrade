@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-use crate::api::common::{Amount, AssetPair, Order, OrderStatus, OrderType, OrderV1};
+use crate::api::common::{Amount, AssetPair, Order, OrderSide, OrderStatus, OrderType, OrderV1};
 use crate::api::request::{OrderRequest, OrderRequestV1};
-use anyhow::{format_err, Result};
+use anyhow::{Result, format_err};
 use num_decimal::Num;
 use std::collections::{HashMap, HashSet};
 use uuid::Uuid;
@@ -78,13 +78,6 @@ impl SimulatedBroker {
     }
 
     pub fn place_order(&mut self, order_req: OrderRequest) -> Result<String> {
-        todo!()
-    }
-    
-    pub fn place_order_v1(
-        &mut self,
-        order_req: OrderRequestV1
-    ) -> Result<String> {
         let notional_per_unit = &self.get_notional_per_unit(&order_req.asset_pair)?;
 
         let quantity: &Num = match &order_req.amount {
@@ -99,7 +92,35 @@ impl SimulatedBroker {
 
         if order_req.limit_price.is_none() {
             // Market order
-            return self.fill_order_immediately(
+            return self.fill_v1_order_immediately(
+                order_req.asset_pair,
+                quantity,
+                notional,
+                OrderType::Market,
+            );
+        }
+
+        let order_id = Uuid::new_v4().to_string();
+
+        todo!()
+    }
+
+    pub fn place_order_v1(&mut self, order_req: OrderRequestV1) -> Result<String> {
+        let notional_per_unit = &self.get_notional_per_unit(&order_req.asset_pair)?;
+
+        let quantity: &Num = match &order_req.amount {
+            Amount::Quantity { quantity } => quantity,
+            Amount::Notional { notional } => &(notional / notional_per_unit),
+        };
+
+        let notional: &Num = match &order_req.amount {
+            Amount::Quantity { quantity } => &(quantity * notional_per_unit),
+            Amount::Notional { notional } => notional,
+        };
+
+        if order_req.limit_price.is_none() {
+            // Market order
+            return self.fill_v1_order_immediately(
                 order_req.asset_pair,
                 quantity,
                 notional,
@@ -123,6 +144,74 @@ impl SimulatedBroker {
     }
 
     fn fill_order_immediately(
+        &mut self,
+        asset_pair: &AssetPair,
+        amount: Amount,
+        order_type: OrderType,
+        order_side: OrderSide,
+    ) -> Result<String> {
+        let notional_per_unit = &self.get_notional_per_unit(asset_pair)?;
+
+        let notional_asset = &asset_pair.notional_asset;
+        let quantity_asset = &asset_pair.quantity_asset;
+
+        let balance_err_asset;
+
+        let quantity: &Num = match &amount {
+            Amount::Quantity { quantity } => quantity,
+            Amount::Notional { notional } => &(notional / notional_per_unit),
+        };
+
+        let notional: &Num = match &amount {
+            Amount::Quantity { quantity } => &(quantity * notional_per_unit),
+            Amount::Notional { notional } => notional,
+        };
+
+        if order_side == OrderSide::Buy {
+            let balance = &self.get_balance(notional_asset);
+            if balance < notional {
+                balance_err_asset = Some(notional_asset);
+            } else {
+                balance_err_asset = None;
+            }
+            self.update_balance(notional_asset, -notional);
+            self.update_balance(quantity_asset, quantity.clone());
+        } else {
+            let balance = &self.get_balance(quantity_asset);
+            if balance < quantity {
+                balance_err_asset = Some(quantity_asset);
+            } else {
+                balance_err_asset = None;
+            }
+            self.update_balance(notional_asset, notional.clone());
+            self.update_balance(quantity_asset, -quantity);
+        }
+
+        if let Some(balance_err_asset) = balance_err_asset {
+            return Err(format_err!(
+                "Not enough {} balance to place the order",
+                balance_err_asset
+            ));
+        }
+
+        let order_id = Uuid::new_v4().to_string();
+
+        self.orders.insert(order_id.clone(), Order {
+            order_id: order_id.clone(),
+            asset_symbol: asset_pair.to_string(),
+            amount: amount.clone(),
+            filled_quantity: quantity.clone(),
+            average_fill_price: Some(notional / quantity),
+            status: OrderStatus::Filled,
+            type_: order_type,
+            side: order_side,
+        });
+
+
+        Ok(order_id)
+    }
+
+    fn fill_v1_order_immediately(
         &mut self,
         asset_pair: AssetPair,
         quantity: &Num,
@@ -331,15 +420,13 @@ mod tests {
             .build();
 
         let err = broker
-            .place_order_v1(
-                OrderRequestV1 {
-                    asset_pair: AssetPair::from_str("AAPL/USD").unwrap(),
-                    amount: Amount::Quantity {
-                        quantity: Num::from(10),
-                    },
-                    limit_price: None,
+            .place_order_v1(OrderRequestV1 {
+                asset_pair: AssetPair::from_str("AAPL/USD").unwrap(),
+                amount: Amount::Quantity {
+                    quantity: Num::from(10),
                 },
-            )
+                limit_price: None,
+            })
             .unwrap_err();
 
         assert_eq!(err.to_string(), "AAPL/USD is not a valid asset pair");
@@ -355,15 +442,13 @@ mod tests {
         );
 
         let err = broker
-            .place_order_v1(
-                OrderRequestV1 {
-                    asset_pair: AssetPair::from_str("GBP/USD").unwrap(),
-                    amount: Amount::Quantity {
-                        quantity: Num::from(10),
-                    },
-                    limit_price: None,
+            .place_order_v1(OrderRequestV1 {
+                asset_pair: AssetPair::from_str("GBP/USD").unwrap(),
+                amount: Amount::Quantity {
+                    quantity: Num::from(10),
                 },
-            )
+                limit_price: None,
+            })
             .unwrap_err();
 
         assert_eq!(err.to_string(), "Not enough USD balance to place the order");
@@ -371,15 +456,13 @@ mod tests {
         broker.update_balance("USD", Num::from_str("13.09").unwrap());
 
         let err = broker
-            .place_order_v1(
-                OrderRequestV1 {
-                    asset_pair: AssetPair::from_str("GBP/USD").unwrap(),
-                    amount: Amount::Quantity {
-                        quantity: Num::from(10),
-                    },
-                    limit_price: None,
+            .place_order_v1(OrderRequestV1 {
+                asset_pair: AssetPair::from_str("GBP/USD").unwrap(),
+                amount: Amount::Quantity {
+                    quantity: Num::from(10),
                 },
-            )
+                limit_price: None,
+            })
             .unwrap_err();
 
         assert_eq!(err.to_string(), "Not enough USD balance to place the order");
@@ -397,15 +480,13 @@ mod tests {
         );
 
         broker
-            .place_order_v1(
-                OrderRequestV1 {
-                    asset_pair: AssetPair::from_str("GBP/USD").unwrap(),
-                    amount: Amount::Quantity {
-                        quantity: Num::from(10),
-                    },
-                    limit_price: None,
+            .place_order_v1(OrderRequestV1 {
+                asset_pair: AssetPair::from_str("GBP/USD").unwrap(),
+                amount: Amount::Quantity {
+                    quantity: Num::from(10),
                 },
-            )
+                limit_price: None,
+            })
             .unwrap();
 
         assert_eq!(broker.get_balance("USD"), Num::from(1));
@@ -426,15 +507,13 @@ mod tests {
             .unwrap();
 
         let order_id = broker
-            .place_order_v1(
-                OrderRequestV1 {
-                    asset_pair: AssetPair::from_str("GBP/USD").unwrap(),
-                    amount: Amount::Quantity {
-                        quantity: Num::from(10),
-                    },
-                    limit_price: None,
+            .place_order_v1(OrderRequestV1 {
+                asset_pair: AssetPair::from_str("GBP/USD").unwrap(),
+                amount: Amount::Quantity {
+                    quantity: Num::from(10),
                 },
-            )
+                limit_price: None,
+            })
             .unwrap();
 
         let order = broker.get_order(&order_id).unwrap();
@@ -455,15 +534,13 @@ mod tests {
             .unwrap();
 
         let order_id = broker
-            .place_order_v1(
-                OrderRequestV1 {
-                    asset_pair: AssetPair::from_str("GBP/USD").unwrap(),
-                    amount: Amount::Quantity {
-                        quantity: Num::from(10),
-                    },
-                    limit_price: None,
+            .place_order_v1(OrderRequestV1 {
+                asset_pair: AssetPair::from_str("GBP/USD").unwrap(),
+                amount: Amount::Quantity {
+                    quantity: Num::from(10),
                 },
-            )
+                limit_price: None,
+            })
             .unwrap();
 
         let order = broker.get_order(&order_id).unwrap();
@@ -495,15 +572,13 @@ mod tests {
             .unwrap();
 
         let order_id = broker
-            .place_order_v1(
-                OrderRequestV1 {
-                    asset_pair: AssetPair::from_str("GBP/USD").unwrap(),
-                    amount: Amount::Notional {
-                        notional: Num::from_str("6.55").unwrap(),
-                    },
-                    limit_price: None,
+            .place_order_v1(OrderRequestV1 {
+                asset_pair: AssetPair::from_str("GBP/USD").unwrap(),
+                amount: Amount::Notional {
+                    notional: Num::from_str("6.55").unwrap(),
                 },
-            )
+                limit_price: None,
+            })
             .unwrap();
 
         let order = broker.get_order(&order_id).unwrap();
