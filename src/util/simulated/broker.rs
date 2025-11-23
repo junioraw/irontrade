@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 use crate::api::common::{Amount, AssetPair, Order, OrderStatus, OrderType};
-use crate::api::request::OrderRequest;
+use crate::api::request::OrderRequestV1;
 use anyhow::{Result, format_err};
 use num_decimal::Num;
 use std::collections::{HashMap, HashSet};
@@ -77,7 +77,7 @@ impl SimulatedBroker {
 
     pub fn place_order(
         &mut self,
-        order_req: OrderRequest
+        order_req: OrderRequestV1
     ) -> Result<String> {
         let notional_per_unit = &self.get_notional_per_unit(&order_req.asset_pair)?;
 
@@ -326,7 +326,7 @@ mod tests {
 
         let err = broker
             .place_order(
-                OrderRequest {
+                OrderRequestV1 {
                     asset_pair: AssetPair::from_str("AAPL/USD").unwrap(),
                     amount: Amount::Quantity {
                         quantity: Num::from(10),
@@ -350,7 +350,7 @@ mod tests {
 
         let err = broker
             .place_order(
-                OrderRequest {
+                OrderRequestV1 {
                     asset_pair: AssetPair::from_str("GBP/USD").unwrap(),
                     amount: Amount::Quantity {
                         quantity: Num::from(10),
@@ -366,7 +366,7 @@ mod tests {
 
         let err = broker
             .place_order(
-                OrderRequest {
+                OrderRequestV1 {
                     asset_pair: AssetPair::from_str("GBP/USD").unwrap(),
                     amount: Amount::Quantity {
                         quantity: Num::from(10),
@@ -392,7 +392,7 @@ mod tests {
 
         broker
             .place_order(
-                OrderRequest {
+                OrderRequestV1 {
                     asset_pair: AssetPair::from_str("GBP/USD").unwrap(),
                     amount: Amount::Quantity {
                         quantity: Num::from(10),
@@ -421,7 +421,7 @@ mod tests {
 
         let order_id = broker
             .place_order(
-                OrderRequest {
+                OrderRequestV1 {
                     asset_pair: AssetPair::from_str("GBP/USD").unwrap(),
                     amount: Amount::Quantity {
                         quantity: Num::from(10),
@@ -450,7 +450,7 @@ mod tests {
 
         let order_id = broker
             .place_order(
-                OrderRequest {
+                OrderRequestV1 {
                     asset_pair: AssetPair::from_str("GBP/USD").unwrap(),
                     amount: Amount::Quantity {
                         quantity: Num::from(10),
@@ -490,7 +490,7 @@ mod tests {
 
         let order_id = broker
             .place_order(
-                OrderRequest {
+                OrderRequestV1 {
                     asset_pair: AssetPair::from_str("GBP/USD").unwrap(),
                     amount: Amount::Notional {
                         notional: Num::from_str("6.55").unwrap(),
