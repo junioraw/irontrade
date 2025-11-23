@@ -1,14 +1,18 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 use num_decimal::Num;
-use crate::api::common::{OpenPosition, OrderV1};
+use crate::api::common::{OpenPosition, Order, OrderV1};
 
 pub struct OrderResponse {
     pub order_id: String,
 }
 
-pub struct GetOrdersResponse {
+pub struct GetOrdersResponseV1 {
     pub orders: Vec<OrderV1>,
+}
+
+pub struct GetOrdersResponse {
+    pub orders: Vec<Order>,
 }
 
 pub struct GetCashResponse {
