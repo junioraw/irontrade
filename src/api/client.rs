@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-use crate::api::request::OrderRequest;
+use crate::api::request::OrderRequestV1;
 use crate::api::response::{
     GetCashResponse, GetOpenPositionResponse, GetOrdersResponse, OrderResponse,
 };
@@ -11,13 +11,13 @@ pub trait IronTradeClient {
     /// Places a buy order. If successful returns the order id of the newly placed order.
     fn buy(
         &mut self,
-        req: OrderRequest,
+        req: OrderRequestV1,
     ) -> impl Future<Output = Result<OrderResponse>> + Send;
 
     /// Places a sell order. If successful returns the order of the newly placed order.
     fn sell(
         &mut self,
-        req: OrderRequest,
+        req: OrderRequestV1,
     ) -> impl Future<Output = Result<OrderResponse>> + Send;
 
     /// Returns all placed orders regardless of status.
