@@ -78,31 +78,18 @@ impl SimulatedBroker {
     }
 
     pub fn place_order(&mut self, order_req: OrderRequest) -> Result<String> {
-        let notional_per_unit = &self.get_notional_per_unit(&order_req.asset_pair)?;
-
-        let quantity: &Num = match &order_req.amount {
-            Amount::Quantity { quantity } => quantity,
-            Amount::Notional { notional } => &(notional / notional_per_unit),
-        };
-
-        let notional: &Num = match &order_req.amount {
-            Amount::Quantity { quantity } => &(quantity * notional_per_unit),
-            Amount::Notional { notional } => notional,
-        };
-
         if order_req.limit_price.is_none() {
-            // Market order
-            return self.fill_v1_order_immediately(
-                order_req.asset_pair,
-                quantity,
-                notional,
+            return self.fill_order_immediately(
+                &order_req.asset_pair,
+                order_req.amount,
                 OrderType::Market,
+                order_req.side
             );
         }
 
         let order_id = Uuid::new_v4().to_string();
 
-        todo!()
+        Ok(order_id)
     }
 
     pub fn place_order_v1(&mut self, order_req: OrderRequestV1) -> Result<String> {
