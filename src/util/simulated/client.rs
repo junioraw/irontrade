@@ -97,7 +97,7 @@ impl IronTradeClient for SimulatedClient {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::api::common::{OrderStatus, OrderType, OrderV1};
+    use crate::api::common::{Order, OrderSide, OrderStatus, OrderType, OrderV1};
     use crate::util::simulated::broker::SimulatedBrokerBuilder;
     use num_decimal::Num;
     use std::str::FromStr;
@@ -110,12 +110,13 @@ mod tests {
         let mut client = create_client();
 
         let order_id = client
-            .buy(OrderRequestV1 {
+            .place_order(OrderRequest {
                 asset_pair: ten_dollars_asset_pair(),
                 amount: Amount::Notional {
                     notional: Num::from(10),
                 },
                 limit_price: None,
+                side: OrderSide::Buy,
             })
             .await
             .unwrap()
@@ -129,22 +130,24 @@ mod tests {
         let mut client = create_client();
 
         client
-            .buy(OrderRequestV1 {
+            .place_order(OrderRequest {
                 asset_pair: ten_dollars_asset_pair(),
                 amount: Amount::Notional {
                     notional: Num::from(10),
                 },
                 limit_price: None,
+                side: OrderSide::Buy,
             })
             .await
             .unwrap();
         let order_id = client
-            .sell(OrderRequestV1 {
+            .place_order(OrderRequest {
                 asset_pair: ten_dollars_asset_pair(),
                 amount: Amount::Notional {
                     notional: Num::from(10),
                 },
                 limit_price: None,
+                side: OrderSide::Sell,
             })
             .await
             .unwrap()
@@ -157,81 +160,85 @@ mod tests {
     async fn get_orders_returns_all_placed_orders() {
         let mut client = create_client();
 
-        assert_eq!(client.get_orders_v1().await.unwrap().orders.len(), 0);
+        assert_eq!(client.get_orders().await.unwrap().orders.len(), 0);
 
         let buy_order_id = client
-            .buy(OrderRequestV1 {
+            .place_order(OrderRequest {
                 asset_pair: ten_dollars_asset_pair(),
                 amount: Amount::Notional {
                     notional: Num::from(10),
                 },
                 limit_price: None,
+                side: OrderSide::Buy,
             })
             .await
             .unwrap()
             .order_id;
 
-        assert_eq!(client.get_orders_v1().await.unwrap().orders.len(), 1);
+        assert_eq!(client.get_orders().await.unwrap().orders.len(), 1);
 
         let sell_order_id = client
-            .sell(OrderRequestV1 {
+            .place_order(OrderRequest {
                 asset_pair: ten_dollars_asset_pair(),
                 amount: Amount::Notional {
                     notional: Num::from(10),
                 },
                 limit_price: None,
+                side: OrderSide::Sell,
             })
             .await
             .unwrap()
             .order_id;
 
-        assert_eq!(client.get_orders_v1().await.unwrap().orders.len(), 2);
+        assert_eq!(client.get_orders().await.unwrap().orders.len(), 2);
 
         assert_eq!(
             client
-                .get_orders_v1()
+                .get_orders()
                 .await
                 .unwrap()
                 .orders
                 .iter()
                 .filter(|order| order.order_id == buy_order_id)
-                .map(OrderV1::clone)
+                .map(Order::clone)
                 .last()
                 .unwrap(),
-            OrderV1 {
+            Order {
                 order_id: buy_order_id,
                 asset_symbol: TEN_DOLLARS_COIN_PAIR.into(),
-                amount: Amount::Quantity {
-                    quantity: Num::from(1),
+                amount: Amount::Notional {
+                    notional: Num::from(10),
                 },
                 filled_quantity: Num::from(1),
                 average_fill_price: Some(Num::from(10)),
                 status: OrderStatus::Filled,
                 type_: OrderType::Market,
+                side: OrderSide::Buy
             }
         );
 
         assert_eq!(
             client
-                .get_orders_v1()
+                .get_orders()
                 .await
                 .unwrap()
                 .orders
                 .iter()
                 .filter(|order| order.order_id == sell_order_id)
-                .map(OrderV1::clone)
+                .map(Order::clone)
                 .last()
                 .unwrap(),
-            OrderV1 {
+            Order {
                 order_id: sell_order_id,
                 asset_symbol: TEN_DOLLARS_COIN_PAIR.into(),
-                amount: Amount::Quantity {
-                    quantity: -Num::from(1), // TODO: remove minus sign #14
+                amount: Amount::Notional {
+                    notional: Num::from(10),
                 },
-                filled_quantity: -Num::from(1), // TODO: remove minus sign #14
+                filled_quantity: Num::from(1), // TODO: remove minus sign #14
                 average_fill_price: Some(Num::from(10)),
                 status: OrderStatus::Filled,
                 type_: OrderType::Market,
+                side: OrderSide::Sell,
             }
         );
     }
@@ -243,12 +250,13 @@ mod tests {
         assert_eq!(client.get_cash().await.unwrap().cash, Num::from(1000));
 
         client
-            .buy(OrderRequestV1 {
+            .place_order(OrderRequest {
                 asset_pair: ten_dollars_asset_pair(),
                 amount: Amount::Notional {
                     notional: Num::from(10),
                 },
                 limit_price: None,
+                side: OrderSide::Buy,
             })
             .await
             .unwrap();
@@ -256,12 +264,13 @@ mod tests {
         assert_eq!(client.get_cash().await.unwrap().cash, Num::from(990));
 
         client
-            .sell(OrderRequestV1 {
+            .place_order(OrderRequest {
                 asset_pair: ten_dollars_asset_pair(),
                 amount: Amount::Notional {
                     notional: Num::from(5),
                 },
                 limit_price: None,
+                side: OrderSide::Sell,
             })
             .await
             .unwrap();
@@ -288,12 +297,13 @@ mod tests {
         );
 
         client
-            .buy(OrderRequestV1 {
+            .place_order(OrderRequest {
                 asset_pair: ten_dollars_asset_pair(),
                 amount: Amount::Notional {
                     notional: Num::from(15),
                 },
                 limit_price: None,
+                side: OrderSide::Buy,
             })
             .await
             .unwrap();
@@ -313,12 +323,13 @@ mod tests {
         );
 
         client
-            .sell(OrderRequestV1 {
+            .place_order(OrderRequest {
                 asset_pair: ten_dollars_asset_pair(),
                 amount: Amount::Notional {
                     notional: Num::from(10),
                 },
                 limit_price: None,
+                side: OrderSide::Sell,
             })
             .await
             .unwrap();
