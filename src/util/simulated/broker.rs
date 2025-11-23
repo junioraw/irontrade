@@ -83,22 +83,25 @@ impl SimulatedBroker {
                 &order_req.asset_pair,
                 order_req.amount,
                 OrderType::Market,
-                order_req.side
+                order_req.side,
             );
         }
 
         let order_id = Uuid::new_v4().to_string();
 
-        self.orders.insert(order_id.clone(), Order {
-            order_id: order_id.clone(),
-            asset_symbol: order_req.asset_pair.to_string(),
-            amount: order_req.amount,
-            filled_quantity: Num::from(0),
-            average_fill_price: None,
-            status: OrderStatus::New,
-            type_: OrderType::Limit,
-            side: order_req.side,
-        });
+        self.orders.insert(
+            order_id.clone(),
+            Order {
+                order_id: order_id.clone(),
+                asset_symbol: order_req.asset_pair.to_string(),
+                amount: order_req.amount,
+                filled_quantity: Num::from(0),
+                average_fill_price: None,
+                status: OrderStatus::New,
+                type_: OrderType::Limit,
+                side: order_req.side,
+            },
+        );
 
         Ok(order_id)
     }
@@ -194,17 +197,19 @@ impl SimulatedBroker {
 
         let order_id = Uuid::new_v4().to_string();
 
-        self.orders.insert(order_id.clone(), Order {
-            order_id: order_id.clone(),
-            asset_symbol: asset_pair.to_string(),
-            amount: amount.clone(),
-            filled_quantity: quantity.clone(),
-            average_fill_price: Some(notional / quantity),
-            status: OrderStatus::Filled,
-            type_: order_type,
-            side: order_side,
-        });
-
+        self.orders.insert(
+            order_id.clone(),
+            Order {
+                order_id: order_id.clone(),
+                asset_symbol: asset_pair.to_string(),
+                amount: amount.clone(),
+                filled_quantity: quantity.clone(),
+                average_fill_price: Some(notional / quantity),
+                status: OrderStatus::Filled,
+                type_: order_type,
+                side: order_side,
+            },
+        );
 
         Ok(order_id)
     }
@@ -446,10 +451,12 @@ mod tests {
     fn place_order_no_balance() {
         let mut broker = SimulatedBrokerBuilder::new("USD").build();
 
-        broker.set_notional_per_unit(
-            AssetPair::from_str("GBP/USD").unwrap(),
-            Num::from_str("1.31").unwrap(),
-        ).unwrap();
+        broker
+            .set_notional_per_unit(
+                AssetPair::from_str("GBP/USD").unwrap(),
+                Num::from_str("1.31").unwrap(),
+            )
+            .unwrap();
 
         let err = broker
             .place_order(OrderRequest {
@@ -469,10 +476,12 @@ mod tests {
     fn place_order_close_but_not_enough_balance() {
         let mut broker = SimulatedBrokerBuilder::new("USD").build();
 
-        broker.set_notional_per_unit(
-            AssetPair::from_str("GBP/USD").unwrap(),
-            Num::from_str("1.31").unwrap(),
-        ).unwrap();
+        broker
+            .set_notional_per_unit(
+                AssetPair::from_str("GBP/USD").unwrap(),
+                Num::from_str("1.31").unwrap(),
+            )
+            .unwrap();
 
         broker.update_balance("USD", Num::from_str("13.09").unwrap());
 
@@ -530,17 +539,18 @@ mod tests {
             .unwrap();
 
         let order_id = broker
-            .place_order_v1(OrderRequestV1 {
+            .place_order(OrderRequest {
                 asset_pair: AssetPair::from_str("GBP/USD").unwrap(),
                 amount: Amount::Quantity {
                     quantity: Num::from(10),
                 },
                 limit_price: None,
+                side: OrderSide::Buy,
             })
             .unwrap();
 
-        let order = broker.get_order_v1(&order_id).unwrap();
-        assert_eq!(order.order_id(), order_id);
+        let order = broker.get_order(&order_id).unwrap();
+        assert_eq!(order.order_id, order_id);
     }
 
     #[test]
@@ -557,27 +567,31 @@ mod tests {
             .unwrap();
 
         let order_id = broker
-            .place_order_v1(OrderRequestV1 {
+            .place_order(OrderRequest {
                 asset_pair: AssetPair::from_str("GBP/USD").unwrap(),
                 amount: Amount::Quantity {
                     quantity: Num::from(10),
                 },
                 limit_price: None,
+                side: OrderSide::Buy,
             })
             .unwrap();
 
-        let order = broker.get_order_v1(&order_id).unwrap();
+        let order = broker.get_order(&order_id).unwrap();
         assert_eq!(
             order,
-            BrokerOrder::FilledOrder(FilledOrder {
+            Order {
                 order_id,
-                asset_pair: AssetPair::from_str("GBP/USD").unwrap(),
-                filled_amount: FilledAmount {
+                asset_symbol: "GBP/USD".into(),
+                amount: Amount::Quantity {
                     quantity: Num::from(10),
-                    notional: Num::from_str("13.1").unwrap()
                 },
-                order_type: OrderType::Market
-            })
+                filled_quantity: Num::from(10),
+                average_fill_price: Some(Num::from_str("1.31").unwrap()),
+                status: OrderStatus::Filled,
+                type_: OrderType::Market,
+                side: OrderSide::Buy,
+            }
         );
     }
 
@@ -595,27 +609,31 @@ mod tests {
             .unwrap();
 
         let order_id = broker
-            .place_order_v1(OrderRequestV1 {
+            .place_order(OrderRequest {
                 asset_pair: AssetPair::from_str("GBP/USD").unwrap(),
                 amount: Amount::Notional {
                     notional: Num::from_str("6.55").unwrap(),
                 },
                 limit_price: None,
+                side: OrderSide::Buy,
             })
             .unwrap();
 
-        let order = broker.get_order_v1(&order_id).unwrap();
+        let order = broker.get_order(&order_id).unwrap();
         assert_eq!(
             order,
-            BrokerOrder::FilledOrder(FilledOrder {
+            Order {
                 order_id,
-                asset_pair: AssetPair::from_str("GBP/USD").unwrap(),
-                filled_amount: FilledAmount {
-                    quantity: Num::from(5),
-                    notional: Num::from_str("6.55").unwrap()
+                asset_symbol: "GBP/USD".into(),
+                amount: Amount::Notional {
+                    notional: Num::from_str("6.55").unwrap(),
                 },
-                order_type: OrderType::Market
-            })
+                filled_quantity: Num::from(5),
+                average_fill_price: Some(Num::from_str("1.31").unwrap()),
+                status: OrderStatus::Filled,
+                type_: OrderType::Market,
+                side: OrderSide::Buy,
+            }
         );
     }
 
