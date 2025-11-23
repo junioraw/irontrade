@@ -6,7 +6,7 @@ use std::str::FromStr;
 use std::string::ParseError;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
-pub struct Order {
+pub struct OrderV1 {
     pub order_id: String,
     pub asset_symbol: String,
     pub amount: Amount,
@@ -16,7 +16,7 @@ pub struct Order {
     pub type_: OrderType,
 }
 
-pub struct OrderV2 {
+pub struct Order {
     pub order_id: String,
     pub asset_symbol: String,
     pub amount: Amount,
