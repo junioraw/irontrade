@@ -16,6 +16,17 @@ pub struct Order {
     pub type_: OrderType,
 }
 
+pub struct OrderV2 {
+    pub order_id: String,
+    pub asset_symbol: String,
+    pub amount: Amount,
+    pub filled_quantity: Num,
+    pub average_fill_price: Option<Num>,
+    pub status: OrderStatus,
+    pub type_: OrderType,
+    pub side: OrderSide,
+}
+
 #[derive(PartialEq, Eq, Debug)]
 pub struct OpenPosition {
     pub asset_symbol: String,
