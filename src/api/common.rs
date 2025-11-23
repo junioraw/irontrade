@@ -16,6 +16,7 @@ pub struct OrderV1 {
     pub type_: OrderType,
 }
 
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Order {
     pub order_id: String,
     pub asset_symbol: String,
@@ -50,6 +51,7 @@ pub enum OrderType {
     Limit,
 }
 
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub enum OrderSide {
     Buy,
     Sell,
