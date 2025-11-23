@@ -1,9 +1,7 @@
 use crate::api::client::IronTradeClient;
 use crate::api::common::{Amount, AssetPair, OpenPosition};
-use crate::api::request::OrderRequestV1;
-use crate::api::response::{
-    GetCashResponse, GetOpenPositionResponse, GetOrdersResponseV1, OrderResponse,
-};
+use crate::api::request::{OrderRequest, OrderRequestV1};
+use crate::api::response::{GetCashResponse, GetOpenPositionResponse, GetOrdersResponse, GetOrdersResponseV1, OrderResponse};
 use crate::util::simulated::broker::SimulatedBroker;
 use anyhow::Result;
 use num_decimal::Num;
@@ -27,6 +25,10 @@ impl SimulatedClient {
 }
 
 impl IronTradeClient for SimulatedClient {
+    async fn place_order(&mut self, req: OrderRequest) -> Result<OrderResponse> {
+        todo!()
+    }
+
     async fn buy(&mut self, req: OrderRequestV1) -> Result<OrderResponse> {
         let order_id = self.broker.place_order(req)?;
         Ok(OrderResponse { order_id })
@@ -49,7 +51,7 @@ impl IronTradeClient for SimulatedClient {
         Ok(OrderResponse { order_id })
     }
 
-    async fn get_orders(&self) -> Result<GetOrdersResponseV1> {
+    async fn get_orders_v1(&self) -> Result<GetOrdersResponseV1> {
         Ok(GetOrdersResponseV1 {
             orders: self
                 .broker
@@ -58,6 +60,10 @@ impl IronTradeClient for SimulatedClient {
                 .map(|order| order.clone().into())
                 .collect(),
         })
+    }
+
+    async fn get_orders(&self) -> Result<GetOrdersResponse> {
+        todo!()
     }
 
     async fn get_cash(&self) -> Result<GetCashResponse> {
@@ -146,7 +152,7 @@ mod tests {
     async fn get_orders_returns_all_placed_orders() {
         let mut client = create_client();
 
-        assert_eq!(client.get_orders().await.unwrap().orders.len(), 0);
+        assert_eq!(client.get_orders_v1().await.unwrap().orders.len(), 0);
 
         let buy_order_id = client
             .buy(OrderRequestV1 {
@@ -160,7 +166,7 @@ mod tests {
             .unwrap()
             .order_id;
 
-        assert_eq!(client.get_orders().await.unwrap().orders.len(), 1);
+        assert_eq!(client.get_orders_v1().await.unwrap().orders.len(), 1);
 
         let sell_order_id = client
             .sell(OrderRequestV1 {
@@ -174,11 +180,11 @@ mod tests {
             .unwrap()
             .order_id;
 
-        assert_eq!(client.get_orders().await.unwrap().orders.len(), 2);
+        assert_eq!(client.get_orders_v1().await.unwrap().orders.len(), 2);
 
         assert_eq!(
             client
-                .get_orders()
+                .get_orders_v1()
                 .await
                 .unwrap()
                 .orders
@@ -202,7 +208,7 @@ mod tests {
 
         assert_eq!(
             client
-                .get_orders()
+                .get_orders_v1()
                 .await
                 .unwrap()
                 .orders
