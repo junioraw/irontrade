@@ -55,7 +55,7 @@ impl IronTradeClient for SimulatedClient {
         Ok(GetOrdersResponseV1 {
             orders: self
                 .broker
-                .get_orders()
+                .get_orders_v1()
                 .iter()
                 .map(|order| order.clone().into())
                 .collect(),
