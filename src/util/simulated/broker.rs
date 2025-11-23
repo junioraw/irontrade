@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-use crate::api::common::{Amount, AssetPair, OrderStatus, OrderType, OrderV1};
-use crate::api::request::OrderRequestV1;
+use crate::api::common::{Amount, AssetPair, Order, OrderStatus, OrderType, OrderV1};
+use crate::api::request::{OrderRequest, OrderRequestV1};
 use anyhow::{format_err, Result};
 use num_decimal::Num;
 use std::collections::{HashMap, HashSet};
@@ -11,7 +11,8 @@ use uuid::Uuid;
 pub struct SimulatedBroker {
     currency: String,
     notional_assets: HashSet<String>,
-    orders: HashMap<String, BrokerOrder>,
+    orders_v1: HashMap<String, BrokerOrder>,
+    orders: HashMap<String, Order>,
     notional_per_unit: HashMap<AssetPair, Num>,
     balances: HashMap<String, Num>,
 }
@@ -69,12 +70,17 @@ impl SimulatedBroker {
         Ok(Self {
             currency: currency.into(),
             notional_assets,
+            orders_v1: HashMap::new(),
             orders: HashMap::new(),
             notional_per_unit: HashMap::new(),
             balances: starting_balances.clone(),
         })
     }
 
+    pub fn place_order(&mut self, order_req: OrderRequest) -> Result<String> {
+        todo!()
+    }
+    
     pub fn place_order_v1(
         &mut self,
         order_req: OrderRequestV1
@@ -103,7 +109,7 @@ impl SimulatedBroker {
 
         let order_id = Uuid::new_v4().to_string();
 
-        self.orders.insert(
+        self.orders_v1.insert(
             order_id.clone(),
             BrokerOrder::PendingOrder(PendingOrder {
                 order_id: order_id.clone(),
@@ -158,7 +164,7 @@ impl SimulatedBroker {
 
         let order_id = Uuid::new_v4().to_string();
 
-        self.orders.insert(
+        self.orders_v1.insert(
             order_id.clone(),
             BrokerOrder::FilledOrder(FilledOrder {
                 order_id: order_id.clone(),
@@ -175,11 +181,11 @@ impl SimulatedBroker {
     }
 
     pub fn get_orders(&self) -> Vec<BrokerOrder> {
-        self.orders.values().cloned().collect()
+        self.orders_v1.values().cloned().collect()
     }
 
     pub fn get_order(&self, order_id: &String) -> Result<BrokerOrder> {
-        self.orders
+        self.orders_v1
             .get(order_id)
             .map(BrokerOrder::clone)
             .ok_or(format_err!("Order with id {} doesn't exist", order_id))
