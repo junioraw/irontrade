@@ -350,15 +350,6 @@ pub enum BrokerOrder {
     PendingOrder(PendingOrder),
 }
 
-impl BrokerOrder {
-    fn order_id(&self) -> String {
-        match self {
-            BrokerOrder::FilledOrder(order) => order.order_id.clone(),
-            BrokerOrder::PendingOrder(order) => order.order_id.clone(),
-        }
-    }
-}
-
 impl From<BrokerOrder> for OrderV1 {
     fn from(order: BrokerOrder) -> Self {
         match order {
