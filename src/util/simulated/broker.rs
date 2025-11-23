@@ -82,6 +82,7 @@ impl SimulatedBroker {
                 order_req.amount,
                 OrderType::Market,
                 order_req.side,
+                None,
             );
         }
 
@@ -93,6 +94,7 @@ impl SimulatedBroker {
                 order_id: order_id.clone(),
                 asset_symbol: order_req.asset_pair.to_string(),
                 amount: order_req.amount,
+                limit_price: order_req.limit_price,
                 filled_quantity: Num::from(0),
                 average_fill_price: None,
                 status: OrderStatus::New,
@@ -110,6 +112,7 @@ impl SimulatedBroker {
         amount: Amount,
         order_type: OrderType,
         order_side: OrderSide,
+        limit_price: Option<Num>,
     ) -> Result<String> {
         let notional_per_unit = &self.get_notional_per_unit(asset_pair)?;
 
@@ -163,6 +166,7 @@ impl SimulatedBroker {
                 order_id: order_id.clone(),
                 asset_symbol: asset_pair.to_string(),
                 amount: amount.clone(),
+                limit_price,
                 filled_quantity: quantity.clone(),
                 average_fill_price: Some(notional / quantity),
                 status: OrderStatus::Filled,
@@ -401,6 +405,7 @@ mod tests {
                 amount: Amount::Quantity {
                     quantity: Num::from(10),
                 },
+                limit_price: None,
                 filled_quantity: Num::from(10),
                 average_fill_price: Some(Num::from_str("1.31").unwrap()),
                 status: OrderStatus::Filled,
@@ -443,6 +448,7 @@ mod tests {
                 amount: Amount::Notional {
                     notional: Num::from_str("6.55").unwrap(),
                 },
+                limit_price: None,
                 filled_quantity: Num::from(5),
                 average_fill_price: Some(Num::from_str("1.31").unwrap()),
                 status: OrderStatus::Filled,

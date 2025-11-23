@@ -10,6 +10,7 @@ pub struct Order {
     pub order_id: String,
     pub asset_symbol: String,
     pub amount: Amount,
+    pub limit_price: Option<Num>,
     pub filled_quantity: Num,
     pub average_fill_price: Option<Num>,
     pub status: OrderStatus,
