@@ -418,12 +418,13 @@ mod tests {
             .build();
 
         let err = broker
-            .place_order_v1(OrderRequestV1 {
+            .place_order(OrderRequest {
                 asset_pair: AssetPair::from_str("AAPL/USD").unwrap(),
                 amount: Amount::Quantity {
                     quantity: Num::from(10),
                 },
                 limit_price: None,
+                side: OrderSide::Buy,
             })
             .unwrap_err();
 
