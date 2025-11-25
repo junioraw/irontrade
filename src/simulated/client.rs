@@ -1,9 +1,7 @@
 use crate::api::client::IronTradeClient;
 use crate::api::common::{AssetPair, OpenPosition};
 use crate::api::request::OrderRequest;
-use crate::api::response::{
-    GetCashResponse, GetOpenPositionResponse, GetOrdersResponse, OrderResponse,
-};
+use crate::api::response::{GetBuyingPowerResponse, GetCashResponse, GetOpenPositionResponse, GetOrdersResponse, OrderResponse};
 use crate::simulated::broker::SimulatedBroker;
 use anyhow::Result;
 use num_decimal::Num;
@@ -36,6 +34,10 @@ impl IronTradeClient for SimulatedClient {
         Ok(GetOrdersResponse {
             orders: self.broker.get_orders(),
         })
+    }
+
+    async fn get_buying_power(&self) -> Result<GetBuyingPowerResponse> {
+        todo!()
     }
 
     async fn get_cash(&self) -> Result<GetCashResponse> {

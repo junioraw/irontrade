@@ -2,7 +2,8 @@
 
 use crate::api::request::OrderRequest;
 use crate::api::response::{
-    GetCashResponse, GetOpenPositionResponse, GetOrdersResponse, OrderResponse,
+    GetBuyingPowerResponse, GetCashResponse, GetOpenPositionResponse, GetOrdersResponse,
+    OrderResponse,
 };
 use anyhow::Result;
 
@@ -13,6 +14,9 @@ pub trait IronTradeClient {
 
     /// Returns all placed orders.
     fn get_orders(&self) -> impl Future<Output = Result<GetOrdersResponse>> + Send;
+
+    /// Returns buying power.
+    fn get_buying_power(&self) -> impl Future<Output = Result<GetBuyingPowerResponse>> + Send;
 
     /// Returns the current cash balance, more specifically the balance of the currency
     /// that is not tied to any order or open position.
