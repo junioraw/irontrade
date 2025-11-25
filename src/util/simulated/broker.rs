@@ -231,7 +231,7 @@ impl SimulatedBroker {
         self.notional_per_unit
             .get(&asset_pair)
             .map(Num::clone)
-            .ok_or(format_err!("{} is not a valid asset pair", asset_pair))
+            .ok_or(format_err!("{} does not have notional per unit", asset_pair))
     }
 
     pub fn set_notional_per_unit(
@@ -295,7 +295,7 @@ mod tests {
             })
             .unwrap_err();
 
-        assert_eq!(err.to_string(), "AAPL/USD is not a valid asset pair");
+        assert_eq!(err.to_string(), "AAPL/USD does not have notional per unit");
     }
 
     #[test]
