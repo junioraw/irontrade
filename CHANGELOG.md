@@ -1,4 +1,4 @@
-0.1.11
+0.2.0
 ----
 - Replace `Client.buy_market`, and `Client.sell_market` with `Client.place_order` which now also supports limit orders
 - Add `limit_price` to `Order` and `OrderRequest`
