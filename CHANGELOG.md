@@ -1,3 +1,7 @@
+0.3.0
+----
+- Rename `irontrade::util::simulated` to `irontrade::simulated`
+
 0.2.0
 ----
 - Replace `Client.buy_market`, and `Client.sell_market` with `Client.place_order` which now also supports limit orders
