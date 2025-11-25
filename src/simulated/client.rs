@@ -4,7 +4,7 @@ use crate::api::request::OrderRequest;
 use crate::api::response::{
     GetCashResponse, GetOpenPositionResponse, GetOrdersResponse, OrderResponse,
 };
-use crate::util::simulated::broker::SimulatedBroker;
+use crate::simulated::broker::SimulatedBroker;
 use anyhow::Result;
 use num_decimal::Num;
 
@@ -65,7 +65,7 @@ impl IronTradeClient for SimulatedClient {
 mod tests {
     use super::*;
     use crate::api::common::{Amount, Order, OrderSide, OrderStatus, OrderType};
-    use crate::util::simulated::broker::SimulatedBrokerBuilder;
+    use crate::simulated::broker::SimulatedBrokerBuilder;
     use num_decimal::Num;
     use std::str::FromStr;
 
