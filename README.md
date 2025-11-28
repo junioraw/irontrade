@@ -18,7 +18,7 @@ let mut broker = SimulatedBrokerBuilder::new("USD").build();
 let mut client = SimulatedClient::new(broker);
 
 // Set asset price
-client.set_notional_per_unit("AAPL", Num::from_str("276.39")?);
+client.set_notional_per_unit("AAPL", Num::from_str("276.39")?)?;
 
 // Place market buy order
 let order_id = client
