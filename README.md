@@ -17,16 +17,20 @@ buy AAPL worth of 100 USD.
 let mut broker = SimulatedBrokerBuilder::new("USD").build();
 let mut client = SimulatedClient::new(broker);
 
+// Set asset price
+client.set_notional_per_unit("AAPL", Num::from_str("276.39")?);
+
+// Place market buy order
 let order_id = client
-    .buy_market(MarketOrderRequest {
-        asset_pair: AssetPair::from_str("AAPL/USD").unwrap(),
+    .place_order(OrderRequest {
+        asset_pair: AssetPair::from_str("AAPL/USD")?,
         amount: Amount::Notional {
             notional: Num::from(100),
         },
+        limit_price: None,
+        side: OrderSide::Buy,
     })
-    .await
-    .unwrap()
-    .order_id;
+    .await?;
 
 println!("Placed order with id {order_id}");
 ```
