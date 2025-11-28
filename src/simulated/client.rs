@@ -1,7 +1,6 @@
 use crate::api::client::IronTradeClient;
-use crate::api::common::{AssetPair, OpenPosition};
+use crate::api::common::{AssetPair, OpenPosition, Order};
 use crate::api::request::OrderRequest;
-use crate::api::response::{GetBuyingPowerResponse, GetCashResponse, GetOpenPositionResponse, GetOrdersResponse, OrderResponse};
 use crate::simulated::broker::SimulatedBroker;
 use anyhow::Result;
 use num_decimal::Num;
@@ -25,43 +24,39 @@ impl SimulatedClient {
 }
 
 impl IronTradeClient for SimulatedClient {
-    async fn place_order(&mut self, req: OrderRequest) -> Result<OrderResponse> {
+    async fn place_order(&mut self, req: OrderRequest) -> Result<String> {
         let order_id = self.broker.place_order(req)?;
-        Ok(OrderResponse { order_id })
+        Ok(order_id)
     }
 
-    async fn get_orders(&self) -> Result<GetOrdersResponse> {
-        Ok(GetOrdersResponse {
-            orders: self.broker.get_orders(),
-        })
+    async fn get_orders(&self) -> Result<Vec<Order>> {
+        let orders = self.broker.get_orders();
+        Ok(orders)
     }
 
-    async fn get_buying_power(&self) -> Result<GetBuyingPowerResponse> {
-        Ok(GetBuyingPowerResponse {
-            buying_power: self.broker.get_buying_power(&self.broker.get_currency())
-        })
+    async fn get_buying_power(&self) -> Result<Num> {
+        let buying_power = self.broker.get_buying_power(&self.broker.get_currency());
+        Ok(buying_power)
     }
 
-    async fn get_cash(&self) -> Result<GetCashResponse> {
-        Ok(GetCashResponse {
-            cash: self.broker.get_balance(&self.broker.get_currency()),
-        })
+    async fn get_cash(&self) -> Result<Num> {
+        let cash_balance = self.broker.get_balance(&self.broker.get_currency());
+        Ok(cash_balance)
     }
 
-    async fn get_open_position(&self, asset_symbol: &str) -> Result<GetOpenPositionResponse> {
+    async fn get_open_position(&self, asset_symbol: &str) -> Result<OpenPosition> {
         let balance = self.broker.get_balance(asset_symbol);
         let notional_per_unit = self.broker.get_notional_per_unit(&AssetPair {
             notional_asset: self.broker.get_currency(),
             quantity_asset: asset_symbol.into(),
         })?;
-        Ok(GetOpenPositionResponse {
-            open_position: OpenPosition {
-                asset_symbol: asset_symbol.into(),
-                quantity: balance.clone(),
-                average_entry_price: None,
-                market_value: Some(balance * notional_per_unit),
-            },
-        })
+        let open_position = OpenPosition {
+            asset_symbol: asset_symbol.into(),
+            quantity: balance.clone(),
+            average_entry_price: None,
+            market_value: Some(balance * notional_per_unit),
+        };
+        Ok(open_position)
     }
 }
 
@@ -77,7 +72,7 @@ mod tests {
     const TEN_DOLLARS_COIN_PAIR: &str = "TEN/USD";
 
     #[tokio::test]
-    async fn buy_market_returns_order_id() {
+    async fn buy_market_returns_order_id() -> Result<()> {
         let mut client = create_client();
 
         let order_id = client
@@ -89,15 +84,15 @@ mod tests {
                 limit_price: None,
                 side: OrderSide::Buy,
             })
-            .await
-            .unwrap()
-            .order_id;
+            .await?;
 
         assert_ne!(order_id, "");
+
+        Ok(())
     }
 
     #[tokio::test]
-    async fn sell_market_returns_order_id() {
+    async fn sell_market_returns_order_id() -> Result<()> {
         let mut client = create_client();
 
         client
@@ -109,8 +104,7 @@ mod tests {
                 limit_price: None,
                 side: OrderSide::Buy,
             })
-            .await
-            .unwrap();
+            .await?;
         let order_id = client
             .place_order(OrderRequest {
                 asset_pair: ten_dollars_asset_pair(),
@@ -120,18 +114,18 @@ mod tests {
                 limit_price: None,
                 side: OrderSide::Sell,
             })
-            .await
-            .unwrap()
-            .order_id;
+            .await?;
 
         assert_ne!(order_id, "");
+
+        Ok(())
     }
 
     #[tokio::test]
-    async fn get_orders_returns_all_placed_orders() {
+    async fn get_orders_returns_all_placed_orders() -> Result<()> {
         let mut client = create_client();
 
-        assert_eq!(client.get_orders().await.unwrap().orders.len(), 0);
+        assert_eq!(client.get_orders().await?.len(), 0);
 
         let buy_order_id = client
             .place_order(OrderRequest {
@@ -142,11 +136,9 @@ mod tests {
                 limit_price: None,
                 side: OrderSide::Buy,
             })
-            .await
-            .unwrap()
-            .order_id;
+            .await?;
 
-        assert_eq!(client.get_orders().await.unwrap().orders.len(), 1);
+        assert_eq!(client.get_orders().await?.len(), 1);
 
         let sell_order_id = client
             .place_order(OrderRequest {
@@ -157,18 +149,14 @@ mod tests {
                 limit_price: None,
                 side: OrderSide::Sell,
             })
-            .await
-            .unwrap()
-            .order_id;
+            .await?;
 
-        assert_eq!(client.get_orders().await.unwrap().orders.len(), 2);
+        assert_eq!(client.get_orders().await?.len(), 2);
 
         assert_eq!(
             client
                 .get_orders()
-                .await
-                .unwrap()
-                .orders
+                .await?
                 .iter()
                 .filter(|order| order.order_id == buy_order_id)
                 .map(Order::clone)
@@ -192,9 +180,7 @@ mod tests {
         assert_eq!(
             client
                 .get_orders()
-                .await
-                .unwrap()
-                .orders
+                .await?
                 .iter()
                 .filter(|order| order.order_id == sell_order_id)
                 .map(Order::clone)
@@ -214,13 +200,15 @@ mod tests {
                 side: OrderSide::Sell,
             }
         );
+
+        Ok(())
     }
 
     #[tokio::test]
-    async fn get_cash_returns_current_balance() {
+    async fn get_cash_returns_current_balance() -> Result<()> {
         let mut client = create_client();
 
-        assert_eq!(client.get_cash().await.unwrap().cash, Num::from(1000));
+        assert_eq!(client.get_cash().await?, Num::from(1000));
 
         client
             .place_order(OrderRequest {
@@ -231,10 +219,9 @@ mod tests {
                 limit_price: None,
                 side: OrderSide::Buy,
             })
-            .await
-            .unwrap();
+            .await?;
 
-        assert_eq!(client.get_cash().await.unwrap().cash, Num::from(990));
+        assert_eq!(client.get_cash().await?, Num::from(990));
 
         client
             .place_order(OrderRequest {
@@ -245,10 +232,11 @@ mod tests {
                 limit_price: None,
                 side: OrderSide::Sell,
             })
-            .await
-            .unwrap();
+            .await?;
 
-        assert_eq!(client.get_cash().await.unwrap().cash, Num::from(995));
+        assert_eq!(client.get_cash().await?, Num::from(995));
+
+        Ok(())
     }
 
     #[tokio::test]
@@ -256,11 +244,7 @@ mod tests {
         let mut client = create_client();
 
         assert_eq!(
-            client
-                .get_open_position(TEN_DOLLARS_COIN)
-                .await
-                .unwrap()
-                .open_position,
+            client.get_open_position(TEN_DOLLARS_COIN).await.unwrap(),
             OpenPosition {
                 asset_symbol: TEN_DOLLARS_COIN.into(),
                 average_entry_price: None,
@@ -282,11 +266,7 @@ mod tests {
             .unwrap();
 
         assert_eq!(
-            client
-                .get_open_position(TEN_DOLLARS_COIN)
-                .await
-                .unwrap()
-                .open_position,
+            client.get_open_position(TEN_DOLLARS_COIN).await.unwrap(),
             OpenPosition {
                 asset_symbol: TEN_DOLLARS_COIN.into(),
                 average_entry_price: None,
@@ -308,11 +288,7 @@ mod tests {
             .unwrap();
 
         assert_eq!(
-            client
-                .get_open_position(TEN_DOLLARS_COIN)
-                .await
-                .unwrap()
-                .open_position,
+            client.get_open_position(TEN_DOLLARS_COIN).await.unwrap(),
             OpenPosition {
                 asset_symbol: TEN_DOLLARS_COIN.into(),
                 average_entry_price: None,

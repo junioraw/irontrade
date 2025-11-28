@@ -167,6 +167,7 @@ impl SimulatedBroker {
         if order.side == OrderSide::Buy {
             self.update_balance(notional_asset, -notional);
             self.update_balance(quantity_asset, quantity.clone());
+            self.update_buying_power(quantity_asset, quantity.clone());
             if let Some(limit_price) = order.limit_price.clone() {
                 self.update_buying_power(notional_asset, limit_price - notional);
             }
