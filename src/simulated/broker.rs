@@ -88,36 +88,62 @@ impl SimulatedBroker {
     pub fn place_order(&mut self, order_req: OrderRequest) -> Result<String> {
         let order_id = Uuid::new_v4().to_string();
 
-        if order_req.limit_price.is_none() {
-            self.fill_order_immediately(
-                &order_id,
-                &order_req.asset_pair,
-                order_req.amount,
-                OrderType::Market,
-                order_req.side,
-                None,
-            )?;
-            return Ok(order_id);
+        let type_ = match order_req.limit_price {
+            None => OrderType::Market,
+            Some(_) => OrderType::Limit,
+        };
+
+        let order = Order {
+            order_id: order_id.clone(),
+            asset_symbol: order_req.asset_pair.to_string(),
+            amount: order_req.amount,
+            limit_price: order_req.limit_price,
+            filled_quantity: Num::from(0),
+            average_fill_price: None,
+            status: OrderStatus::New,
+            type_,
+            side: order_req.side,
+        };
+
+        self.queue_order(order.clone())?;
+
+        if order.limit_price.is_some() {
+            self.maybe_update_order(&order_id)?
+        } else {
+            self.fill_order_immediately(&order_id)?
         }
 
-        self.orders.insert(
-            order_id.clone(),
-            Order {
-                order_id: order_id.clone(),
-                asset_symbol: order_req.asset_pair.to_string(),
-                amount: order_req.amount,
-                limit_price: order_req.limit_price,
-                filled_quantity: Num::from(0),
-                average_fill_price: None,
-                status: OrderStatus::New,
-                type_: OrderType::Limit,
-                side: order_req.side,
-            },
-        );
-
-        self.maybe_update_order(&order_id)?;
-
         Ok(order_id)
+    }
+
+    fn queue_order(&mut self, order: Order) -> Result<()> {
+        let (asset, buying_power_needed) = self.get_asset_and_buying_power_needed(&order)?;
+        let buying_power = self.get_buying_power(&asset)?;
+        if buying_power < buying_power_needed {
+            return Err(format_err!("Not enough {} buying power", asset));
+        }
+        self.orders.insert(order.order_id.clone(), order);
+        Ok(())
+    }
+
+    fn get_asset_and_buying_power_needed(&self, order: &Order) -> Result<(String, Num)> {
+        let asset_pair = &AssetPair::from_str(&order.asset_symbol)?;
+
+        let (quantity, notional) =
+            self.get_current_quantity_and_notional(&order.asset_symbol, &order.amount)?;
+
+        let asset: &str;
+        let buying_power_needed: Num;
+
+        if order.side == OrderSide::Buy {
+            asset = &asset_pair.notional_asset;
+            buying_power_needed = order.limit_price.clone().unwrap_or_else(|| notional);
+        } else {
+            asset = &asset_pair.quantity_asset;
+            buying_power_needed = quantity;
+        }
+
+        Ok((asset.to_string(), buying_power_needed))
     }
 
     fn maybe_update_order(&mut self, order_id: &String) -> Result<()> {
@@ -129,88 +155,60 @@ impl SimulatedBroker {
         if current_price == limit_price
             || ((order.side == OrderSide::Buy) == (current_price < limit_price))
         {
-            self.fill_order_immediately(
-                &order.order_id,
-                asset_pair,
-                order.amount,
-                order.type_,
-                order.side,
-                order.limit_price,
-            )?;
+            self.fill_order_immediately(&order.order_id)?;
         }
 
         Ok(())
     }
 
-    fn fill_order_immediately(
-        &mut self,
-        order_id: &String,
-        asset_pair: &AssetPair,
-        amount: Amount,
-        order_type: OrderType,
-        order_side: OrderSide,
-        limit_price: Option<Num>,
-    ) -> Result<()> {
-        let notional_per_unit = &self.get_notional_per_unit(asset_pair)?;
-
+    fn fill_order_immediately(&mut self, order_id: &String) -> Result<()> {
+        let order = &self.orders.get(order_id).unwrap().clone();
+        let (quantity, notional) =
+            &self.get_current_quantity_and_notional(&order.asset_symbol, &order.amount)?;
+        let asset_pair = &AssetPair::from_str(&order.asset_symbol)?;
         let notional_asset = &asset_pair.notional_asset;
         let quantity_asset = &asset_pair.quantity_asset;
 
-        let balance_err_asset;
-
-        let quantity: &Num = match &amount {
-            Amount::Quantity { quantity } => quantity,
-            Amount::Notional { notional } => &(notional / notional_per_unit),
-        };
-
-        let notional: &Num = match &amount {
-            Amount::Quantity { quantity } => &(quantity * notional_per_unit),
-            Amount::Notional { notional } => notional,
-        };
-
-        if order_side == OrderSide::Buy {
-            let balance = &self.get_balance(notional_asset)?;
-            if balance < notional {
-                balance_err_asset = Some(notional_asset);
-            } else {
-                balance_err_asset = None;
+        if order.side == OrderSide::Buy {
+            self.update_balance(notional_asset, -notional)?;
+            self.update_balance(quantity_asset, quantity.clone())?;
+            if let Some(limit_price) = order.limit_price.clone() {
+                self.update_buying_power(notional_asset, limit_price - notional)?;
             }
-            self.update_balance(notional_asset, -notional);
-            self.update_balance(quantity_asset, quantity.clone());
         } else {
-            let balance = &self.get_balance(quantity_asset)?;
-            if balance < quantity {
-                balance_err_asset = Some(quantity_asset);
-            } else {
-                balance_err_asset = None;
-            }
-            self.update_balance(notional_asset, notional.clone());
-            self.update_balance(quantity_asset, -quantity);
-        }
-
-        if let Some(balance_err_asset) = balance_err_asset {
-            return Err(format_err!(
-                "Not enough {} balance to place the order",
-                balance_err_asset
-            ));
+            self.update_balance(notional_asset, notional.clone())?;
+            self.update_balance(quantity_asset, -quantity)?;
         }
 
         self.orders.insert(
             order_id.clone(),
             Order {
-                order_id: order_id.clone(),
-                asset_symbol: asset_pair.to_string(),
-                amount: amount.clone(),
-                limit_price,
                 filled_quantity: quantity.clone(),
-                average_fill_price: Some(notional / quantity),
+                average_fill_price: None,
                 status: OrderStatus::Filled,
-                type_: order_type,
-                side: order_side,
+                ..order.clone()
             },
         );
 
         Ok(())
+    }
+
+    fn get_current_quantity_and_notional(
+        &self,
+        asset_symbol: &str,
+        amount: &Amount,
+    ) -> Result<(Num, Num)> {
+        let asset_pair = &AssetPair::from_str(&asset_symbol)?;
+        let notional_per_unit = &self.get_notional_per_unit(asset_pair)?;
+        let quantity: Num = match amount {
+            Amount::Quantity { quantity } => quantity.clone(),
+            Amount::Notional { notional } => notional / notional_per_unit,
+        };
+        let notional: Num = match amount {
+            Amount::Quantity { quantity } => quantity * notional_per_unit,
+            Amount::Notional { notional } => notional.clone(),
+        };
+        Ok((quantity, notional))
     }
 
     pub fn get_orders(&self) -> Vec<Order> {
@@ -228,22 +226,19 @@ impl SimulatedBroker {
         self.currency.clone()
     }
 
-    pub fn get_buying_power(&self, notional_asset: &str) -> Result<Num> {
-        Self::get_notional_asset_value(&self.buying_power_balances, notional_asset)
+    pub fn get_buying_power(&self, asset: &str) -> Result<Num> {
+        Self::get_asset_value(&self.buying_power_balances, asset)
     }
 
-    pub fn get_balance(&self, notional_asset: &str) -> Result<Num> {
-        Self::get_notional_asset_value(&self.balances, notional_asset)
+    pub fn get_balance(&self, asset: &str) -> Result<Num> {
+        Self::get_asset_value(&self.balances, asset)
     }
 
-    fn get_notional_asset_value(
-        values: &HashMap<String, Num>,
-        notional_asset: &str,
-    ) -> Result<Num> {
+    fn get_asset_value(values: &HashMap<String, Num>, asset: &str) -> Result<Num> {
         values
-            .get(notional_asset)
+            .get(asset)
             .map(Num::clone)
-            .ok_or_else(|| format_err!("Notional asset {} doesn't exist", notional_asset))
+            .ok_or_else(|| format_err!("Asset {} doesn't exist", asset))
     }
 
     pub fn get_notional_per_unit(&self, asset_pair: &AssetPair) -> Result<Num> {
@@ -284,13 +279,21 @@ impl SimulatedBroker {
         Ok(())
     }
 
-    fn update_balance(&mut self, asset: &str, delta: Num) {
-        let previous_balance = self
-            .balances
+    fn update_balance(&mut self, asset: &str, delta: Num) -> Result<()> {
+        Self::update_value(&mut self.balances, asset, delta)
+    }
+
+    fn update_buying_power(&mut self, asset: &str, delta: Num) -> Result<()> {
+        Self::update_value(&mut self.buying_power_balances, asset, delta)
+    }
+
+    fn update_value(values: &mut HashMap<String, Num>, asset: &str, delta: Num) -> Result<()> {
+        let previous_balance = values
             .get(asset)
             .map(Num::clone)
-            .unwrap_or(Num::from(0));
-        self.balances.insert(asset.into(), previous_balance + delta);
+            .ok_or_else(|| format_err!("Asset {} doesn't exist", asset))?;
+        values.insert(asset.into(), previous_balance + delta);
+        Ok(())
     }
 }
 
