@@ -2,7 +2,7 @@
 
 use crate::api::common::{Amount, AssetPair, Order, OrderSide, OrderStatus, OrderType};
 use crate::api::request::OrderRequest;
-use anyhow::{format_err, Result};
+use anyhow::{Result, format_err};
 use num_decimal::Num;
 use std::collections::{HashMap, HashSet};
 use std::str::FromStr;
@@ -117,6 +117,7 @@ impl SimulatedBroker {
         if buying_power < buying_power_needed {
             return Err(format_err!("Not enough {} buying power", asset));
         }
+        self.update_buying_power(&asset, -buying_power_needed);
         self.orders.insert(order.order_id.clone(), order);
         Ok(())
     }
@@ -132,7 +133,11 @@ impl SimulatedBroker {
 
         if order.side == OrderSide::Buy {
             asset = &asset_pair.notional_asset;
-            buying_power_needed = order.limit_price.clone().unwrap_or_else(|| notional);
+            if let Some(limit_price) = &order.limit_price {
+                buying_power_needed = limit_price * quantity;
+            } else {
+                buying_power_needed = notional;
+            }
         } else {
             asset = &asset_pair.quantity_asset;
             buying_power_needed = quantity;
@@ -169,10 +174,11 @@ impl SimulatedBroker {
             self.update_balance(quantity_asset, quantity.clone());
             self.update_buying_power(quantity_asset, quantity.clone());
             if let Some(limit_price) = order.limit_price.clone() {
-                self.update_buying_power(notional_asset, limit_price - notional);
+                self.update_buying_power(notional_asset, limit_price * quantity - notional);
             }
         } else {
             self.update_balance(notional_asset, notional.clone());
+            self.update_buying_power(notional_asset, notional.clone());
             self.update_balance(quantity_asset, -quantity);
         }
 
@@ -381,7 +387,9 @@ mod tests {
         })?;
 
         assert_eq!(broker.get_balance("USD"), Num::from(1));
+        assert_eq!(broker.get_buying_power("USD"), Num::from(1));
         assert_eq!(broker.get_balance("GBP"), Num::from(10));
+        assert_eq!(broker.get_buying_power("GBP"), Num::from(10));
 
         Ok(())
     }
@@ -415,30 +423,23 @@ mod tests {
     }
 
     #[test]
-    fn get_market_order() {
+    fn get_market_buy_order() -> Result<()> {
         let mut broker = SimulatedBrokerBuilder::new("USD")
-            .set_balance(Num::from_str("14.1").unwrap())
+            .set_balance(Num::from_str("14.1")?)
             .build();
 
-        broker
-            .set_notional_per_unit(
-                AssetPair::from_str("GBP/USD").unwrap(),
-                Num::from_str("1.31").unwrap(),
-            )
-            .unwrap();
+        broker.set_notional_per_unit(AssetPair::from_str("GBP/USD")?, Num::from_str("1.31")?)?;
 
-        let order_id = broker
-            .place_order(OrderRequest {
-                asset_pair: AssetPair::from_str("GBP/USD").unwrap(),
-                amount: Amount::Quantity {
-                    quantity: Num::from(10),
-                },
-                limit_price: None,
-                side: OrderSide::Buy,
-            })
-            .unwrap();
+        let order_id = broker.place_order(OrderRequest {
+            asset_pair: AssetPair::from_str("GBP/USD")?,
+            amount: Amount::Quantity {
+                quantity: Num::from(10),
+            },
+            limit_price: None,
+            side: OrderSide::Buy,
+        })?;
 
-        let order = broker.get_order(&order_id).unwrap();
+        let order = broker.get_order(&order_id)?;
         assert_eq!(
             order,
             Order {
@@ -449,39 +450,83 @@ mod tests {
                 },
                 limit_price: None,
                 filled_quantity: Num::from(10),
-                average_fill_price: Some(Num::from_str("1.31").unwrap()),
+                average_fill_price: Some(Num::from_str("1.31")?),
                 status: OrderStatus::Filled,
                 type_: OrderType::Market,
                 side: OrderSide::Buy,
             }
         );
+
+        assert_eq!(broker.get_balance("USD"), Num::from(1));
+        assert_eq!(broker.get_buying_power("USD"), Num::from(1));
+        assert_eq!(broker.get_balance("GBP"), Num::from(10));
+        assert_eq!(broker.get_buying_power("GBP"), Num::from(10));
+
+        Ok(())
     }
 
     #[test]
-    fn get_updated_limit_order() {
-        let mut broker = SimulatedBrokerBuilder::new("USD")
-            .set_balance(Num::from_str("14.1").unwrap())
-            .build();
+    fn get_market_sell_order() -> Result<()> {
+        let mut broker = SimulatedBrokerBuilder::new("USD").build();
 
-        broker
-            .set_notional_per_unit(
-                AssetPair::from_str("GBP/USD").unwrap(),
-                Num::from_str("1.31").unwrap(),
-            )
-            .unwrap();
+        broker.set_notional_per_unit(AssetPair::from_str("GBP/USD")?, Num::from_str("1.31")?)?;
 
-        let order_id = broker
-            .place_order(OrderRequest {
-                asset_pair: AssetPair::from_str("GBP/USD").unwrap(),
+        broker.update_balance("GBP", Num::from(11));
+        broker.update_buying_power("GBP", Num::from(11));
+
+        let order_id = broker.place_order(OrderRequest {
+            asset_pair: AssetPair::from_str("GBP/USD")?,
+            amount: Amount::Quantity {
+                quantity: Num::from(10),
+            },
+            limit_price: None,
+            side: OrderSide::Sell,
+        })?;
+
+        let order = broker.get_order(&order_id)?;
+        assert_eq!(
+            order,
+            Order {
+                order_id,
+                asset_symbol: "GBP/USD".into(),
                 amount: Amount::Quantity {
                     quantity: Num::from(10),
                 },
-                limit_price: Some(Num::from_str("1.3").unwrap()),
-                side: OrderSide::Buy,
-            })
-            .unwrap();
+                limit_price: None,
+                filled_quantity: Num::from(10),
+                average_fill_price: Some(Num::from_str("1.31")?),
+                status: OrderStatus::Filled,
+                type_: OrderType::Market,
+                side: OrderSide::Sell,
+            }
+        );
 
-        let order = broker.get_order(&order_id).unwrap();
+        assert_eq!(broker.get_balance("USD"), Num::from_str("13.1")?);
+        assert_eq!(broker.get_buying_power("USD"), Num::from_str("13.1")?);
+        assert_eq!(broker.get_balance("GBP"), Num::from(1));
+        assert_eq!(broker.get_buying_power("GBP"), Num::from(1));
+
+        Ok(())
+    }
+
+    #[test]
+    fn get_updated_limit_buy_order() -> Result<()> {
+        let mut broker = SimulatedBrokerBuilder::new("USD")
+            .set_balance(Num::from_str("14.1")?)
+            .build();
+
+        broker.set_notional_per_unit(AssetPair::from_str("GBP/USD")?, Num::from_str("1.31")?)?;
+
+        let order_id = broker.place_order(OrderRequest {
+            asset_pair: AssetPair::from_str("GBP/USD")?,
+            amount: Amount::Quantity {
+                quantity: Num::from(10),
+            },
+            limit_price: Some(Num::from_str("1.3")?),
+            side: OrderSide::Buy,
+        })?;
+
+        let order = broker.get_order(&order_id)?;
         assert_eq!(
             order,
             Order {
@@ -490,7 +535,7 @@ mod tests {
                 amount: Amount::Quantity {
                     quantity: Num::from(10),
                 },
-                limit_price: Some(Num::from_str("1.3").unwrap()),
+                limit_price: Some(Num::from_str("1.3")?),
                 filled_quantity: Num::from(0),
                 average_fill_price: None,
                 status: OrderStatus::New,
@@ -499,14 +544,14 @@ mod tests {
             }
         );
 
-        broker
-            .set_notional_per_unit(
-                AssetPair::from_str("GBP/USD").unwrap(),
-                Num::from_str("1.29").unwrap(),
-            )
-            .unwrap();
+        assert_eq!(broker.get_balance("USD"), Num::from_str("14.1")?);
+        assert_eq!(broker.get_buying_power("USD"), Num::from_str("1.1")?);
+        assert_eq!(broker.get_balance("GBP"), Num::from(0));
+        assert_eq!(broker.get_buying_power("GBP"), Num::from(0));
 
-        let order = broker.get_order(&order_id).unwrap();
+        broker.set_notional_per_unit(AssetPair::from_str("GBP/USD")?, Num::from_str("1.29")?)?;
+
+        let order = broker.get_order(&order_id)?;
         assert_eq!(
             order,
             Order {
@@ -515,41 +560,67 @@ mod tests {
                 amount: Amount::Quantity {
                     quantity: Num::from(10),
                 },
-                limit_price: Some(Num::from_str("1.3").unwrap()),
+                limit_price: Some(Num::from_str("1.3")?),
                 filled_quantity: Num::from(10),
-                average_fill_price: Some(Num::from_str("1.29").unwrap()),
+                average_fill_price: Some(Num::from_str("1.29")?),
                 status: OrderStatus::Filled,
                 type_: OrderType::Limit,
                 side: OrderSide::Buy,
             }
         );
+
+        assert_eq!(broker.get_balance("USD"), Num::from_str("1.2")?);
+        assert_eq!(broker.get_buying_power("USD"), Num::from_str("1.2")?);
+        assert_eq!(broker.get_balance("GBP"), Num::from(10));
+        assert_eq!(broker.get_buying_power("GBP"), Num::from(10));
+
+        Ok(())
     }
 
     #[test]
-    fn get_filled_limit_order() {
-        let mut broker = SimulatedBrokerBuilder::new("USD")
-            .set_balance(Num::from_str("14.1").unwrap())
-            .build();
+    fn get_updated_limit_sell_order() -> Result<()> {
+        let mut broker = SimulatedBrokerBuilder::new("USD").build();
 
-        broker
-            .set_notional_per_unit(
-                AssetPair::from_str("GBP/USD").unwrap(),
-                Num::from_str("1.31").unwrap(),
-            )
-            .unwrap();
+        broker.set_notional_per_unit(AssetPair::from_str("GBP/USD")?, Num::from_str("1.31")?)?;
 
-        let order_id = broker
-            .place_order(OrderRequest {
-                asset_pair: AssetPair::from_str("GBP/USD").unwrap(),
+        broker.update_balance("GBP", Num::from(12));
+        broker.update_buying_power("GBP", Num::from(12));
+
+        let order_id = broker.place_order(OrderRequest {
+            asset_pair: AssetPair::from_str("GBP/USD")?,
+            amount: Amount::Quantity {
+                quantity: Num::from(10),
+            },
+            limit_price: Some(Num::from_str("1.32")?),
+            side: OrderSide::Sell,
+        })?;
+
+        let order = broker.get_order(&order_id)?;
+        assert_eq!(
+            order,
+            Order {
+                order_id: order_id.clone(),
+                asset_symbol: "GBP/USD".into(),
                 amount: Amount::Quantity {
                     quantity: Num::from(10),
                 },
-                limit_price: Some(Num::from(2)),
-                side: OrderSide::Buy,
-            })
-            .unwrap();
+                limit_price: Some(Num::from_str("1.32")?),
+                filled_quantity: Num::from(0),
+                average_fill_price: None,
+                status: OrderStatus::New,
+                type_: OrderType::Limit,
+                side: OrderSide::Sell,
+            }
+        );
 
-        let order = broker.get_order(&order_id).unwrap();
+        assert_eq!(broker.get_balance("USD"), Num::from(0));
+        assert_eq!(broker.get_buying_power("USD"), Num::from(0));
+        assert_eq!(broker.get_balance("GBP"), Num::from(12));
+        assert_eq!(broker.get_buying_power("GBP"), Num::from(2));
+
+        broker.set_notional_per_unit(AssetPair::from_str("GBP/USD")?, Num::from_str("1.33")?)?;
+
+        let order = broker.get_order(&order_id)?;
         assert_eq!(
             order,
             Order {
@@ -558,14 +629,108 @@ mod tests {
                 amount: Amount::Quantity {
                     quantity: Num::from(10),
                 },
-                limit_price: Some(Num::from(2)),
+                limit_price: Some(Num::from_str("1.32")?),
                 filled_quantity: Num::from(10),
-                average_fill_price: Some(Num::from_str("1.31").unwrap()),
+                average_fill_price: Some(Num::from_str("1.33")?),
+                status: OrderStatus::Filled,
+                type_: OrderType::Limit,
+                side: OrderSide::Sell,
+            }
+        );
+
+        assert_eq!(broker.get_balance("USD"), Num::from_str("13.3")?);
+        assert_eq!(broker.get_buying_power("USD"), Num::from_str("13.3")?);
+        assert_eq!(broker.get_balance("GBP"), Num::from(2));
+        assert_eq!(broker.get_buying_power("GBP"), Num::from(2));
+
+        Ok(())
+    }
+
+    #[test]
+    fn get_filled_limit_buy_order() -> Result<()> {
+        let mut broker = SimulatedBrokerBuilder::new("USD")
+            .set_balance(Num::from_str("14.1")?)
+            .build();
+
+        broker.set_notional_per_unit(AssetPair::from_str("GBP/USD")?, Num::from_str("1.31")?)?;
+
+        let order_id = broker.place_order(OrderRequest {
+            asset_pair: AssetPair::from_str("GBP/USD")?,
+            amount: Amount::Quantity {
+                quantity: Num::from(10),
+            },
+            limit_price: Some(Num::from_str("1.4")?),
+            side: OrderSide::Buy,
+        })?;
+
+        let order = broker.get_order(&order_id)?;
+        assert_eq!(
+            order,
+            Order {
+                order_id,
+                asset_symbol: "GBP/USD".into(),
+                amount: Amount::Quantity {
+                    quantity: Num::from(10),
+                },
+                limit_price: Some(Num::from_str("1.4")?),
+                filled_quantity: Num::from(10),
+                average_fill_price: Some(Num::from_str("1.31")?),
                 status: OrderStatus::Filled,
                 type_: OrderType::Limit,
                 side: OrderSide::Buy,
             }
         );
+
+        assert_eq!(broker.get_balance("USD"), Num::from(1));
+        assert_eq!(broker.get_buying_power("USD"), Num::from(1));
+        assert_eq!(broker.get_balance("GBP"), Num::from(10));
+        assert_eq!(broker.get_buying_power("GBP"), Num::from(10));
+
+        Ok(())
+    }
+
+    #[test]
+    fn get_filled_limit_sell_order() -> Result<()> {
+        let mut broker = SimulatedBrokerBuilder::new("USD").build();
+
+        broker.set_notional_per_unit(AssetPair::from_str("GBP/USD")?, Num::from_str("1.31")?)?;
+
+        broker.update_balance("GBP", Num::from_str("10.5")?);
+        broker.update_buying_power("GBP", Num::from_str("10.5")?);
+
+        let order_id = broker.place_order(OrderRequest {
+            asset_pair: AssetPair::from_str("GBP/USD")?,
+            amount: Amount::Quantity {
+                quantity: Num::from(10),
+            },
+            limit_price: Some(Num::from_str("1.25")?),
+            side: OrderSide::Sell,
+        })?;
+
+        let order = broker.get_order(&order_id)?;
+        assert_eq!(
+            order,
+            Order {
+                order_id,
+                asset_symbol: "GBP/USD".into(),
+                amount: Amount::Quantity {
+                    quantity: Num::from(10),
+                },
+                limit_price: Some(Num::from_str("1.25")?),
+                filled_quantity: Num::from(10),
+                average_fill_price: Some(Num::from_str("1.31")?),
+                status: OrderStatus::Filled,
+                type_: OrderType::Limit,
+                side: OrderSide::Sell,
+            }
+        );
+
+        assert_eq!(broker.get_balance("USD"), Num::from_str("13.1")?);
+        assert_eq!(broker.get_buying_power("USD"), Num::from_str("13.1")?);
+        assert_eq!(broker.get_balance("GBP"), Num::from_str("0.5")?);
+        assert_eq!(broker.get_buying_power("GBP"), Num::from_str("0.5")?);
+
+        Ok(())
     }
 
     #[test]
