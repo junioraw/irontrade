@@ -2,7 +2,7 @@
 
 use crate::api::common::{Amount, AssetPair, Order, OrderSide, OrderStatus, OrderType};
 use crate::api::request::OrderRequest;
-use anyhow::{Result, format_err};
+use anyhow::{format_err, Result};
 use num_decimal::Num;
 use std::collections::{HashMap, HashSet};
 use std::str::FromStr;
@@ -45,14 +45,9 @@ impl SimulatedBrokerBuilder {
 
     pub fn add_notional_asset(&mut self, notional_asset: &str, balance: Option<Num>) -> &mut Self {
         self.notional_assets.insert(notional_asset.into());
-        let effective_balance: Num;
         if let Some(balance) = balance {
-            effective_balance = balance;
-        } else {
-            effective_balance = Num::from(0);
+            self.balances.insert(notional_asset.into(), balance);
         }
-        self.balances
-            .insert(notional_asset.into(), effective_balance);
         self
     }
 
@@ -118,7 +113,7 @@ impl SimulatedBroker {
 
     fn queue_order(&mut self, order: Order) -> Result<()> {
         let (asset, buying_power_needed) = self.get_asset_and_buying_power_needed(&order)?;
-        let buying_power = self.get_buying_power(&asset)?;
+        let buying_power = self.get_buying_power(&asset);
         if buying_power < buying_power_needed {
             return Err(format_err!("Not enough {} buying power", asset));
         }
@@ -170,21 +165,21 @@ impl SimulatedBroker {
         let quantity_asset = &asset_pair.quantity_asset;
 
         if order.side == OrderSide::Buy {
-            self.update_balance(notional_asset, -notional)?;
-            self.update_balance(quantity_asset, quantity.clone())?;
+            self.update_balance(notional_asset, -notional);
+            self.update_balance(quantity_asset, quantity.clone());
             if let Some(limit_price) = order.limit_price.clone() {
-                self.update_buying_power(notional_asset, limit_price - notional)?;
+                self.update_buying_power(notional_asset, limit_price - notional);
             }
         } else {
-            self.update_balance(notional_asset, notional.clone())?;
-            self.update_balance(quantity_asset, -quantity)?;
+            self.update_balance(notional_asset, notional.clone());
+            self.update_balance(quantity_asset, -quantity);
         }
 
         self.orders.insert(
             order_id.clone(),
             Order {
                 filled_quantity: quantity.clone(),
-                average_fill_price: None,
+                average_fill_price: Some(notional / quantity),
                 status: OrderStatus::Filled,
                 ..order.clone()
             },
@@ -226,19 +221,16 @@ impl SimulatedBroker {
         self.currency.clone()
     }
 
-    pub fn get_buying_power(&self, asset: &str) -> Result<Num> {
+    pub fn get_buying_power(&self, asset: &str) -> Num {
         Self::get_asset_value(&self.buying_power_balances, asset)
     }
 
-    pub fn get_balance(&self, asset: &str) -> Result<Num> {
+    pub fn get_balance(&self, asset: &str) -> Num {
         Self::get_asset_value(&self.balances, asset)
     }
 
-    fn get_asset_value(values: &HashMap<String, Num>, asset: &str) -> Result<Num> {
-        values
-            .get(asset)
-            .map(Num::clone)
-            .ok_or_else(|| format_err!("Asset {} doesn't exist", asset))
+    fn get_asset_value(values: &HashMap<String, Num>, asset: &str) -> Num {
+        values.get(asset).map(Num::clone).unwrap_or(Num::from(0))
     }
 
     pub fn get_notional_per_unit(&self, asset_pair: &AssetPair) -> Result<Num> {
@@ -279,21 +271,17 @@ impl SimulatedBroker {
         Ok(())
     }
 
-    fn update_balance(&mut self, asset: &str, delta: Num) -> Result<()> {
+    fn update_balance(&mut self, asset: &str, delta: Num) {
         Self::update_value(&mut self.balances, asset, delta)
     }
 
-    fn update_buying_power(&mut self, asset: &str, delta: Num) -> Result<()> {
+    fn update_buying_power(&mut self, asset: &str, delta: Num) {
         Self::update_value(&mut self.buying_power_balances, asset, delta)
     }
 
-    fn update_value(values: &mut HashMap<String, Num>, asset: &str, delta: Num) -> Result<()> {
-        let previous_balance = values
-            .get(asset)
-            .map(Num::clone)
-            .ok_or_else(|| format_err!("Asset {} doesn't exist", asset))?;
+    fn update_value(values: &mut HashMap<String, Num>, asset: &str, delta: Num) {
+        let previous_balance = values.get(asset).map(Num::clone).unwrap_or(Num::from(0));
         values.insert(asset.into(), previous_balance + delta);
-        Ok(())
     }
 }
 
@@ -346,25 +334,20 @@ mod tests {
             })
             .unwrap_err();
 
-        assert_eq!(err.to_string(), "Not enough USD balance to place the order");
+        assert_eq!(err.to_string(), "Not enough USD buying power");
     }
 
     #[test]
-    fn place_order_close_but_not_enough_balance() {
+    fn place_order_close_but_not_enough_balance() -> Result<()> {
         let mut broker = SimulatedBrokerBuilder::new("USD").build();
 
-        broker
-            .set_notional_per_unit(
-                AssetPair::from_str("GBP/USD").unwrap(),
-                Num::from_str("1.31").unwrap(),
-            )
-            .unwrap();
+        broker.set_notional_per_unit(AssetPair::from_str("GBP/USD")?, Num::from_str("1.31")?)?;
 
-        broker.update_balance("USD", Num::from_str("13.09").unwrap());
+        broker.update_balance("USD", Num::from_str("13.09")?);
 
         let err = broker
             .place_order(OrderRequest {
-                asset_pair: AssetPair::from_str("GBP/USD").unwrap(),
+                asset_pair: AssetPair::from_str("GBP/USD")?,
                 amount: Amount::Quantity {
                     quantity: Num::from(10),
                 },
@@ -373,7 +356,9 @@ mod tests {
             })
             .unwrap_err();
 
-        assert_eq!(err.to_string(), "Not enough USD balance to place the order");
+        assert_eq!(err.to_string(), "Not enough USD buying power");
+
+        Ok(())
     }
 
     #[test]
@@ -394,8 +379,8 @@ mod tests {
             side: OrderSide::Buy,
         })?;
 
-        assert_eq!(broker.get_balance("USD")?, Num::from(1));
-        assert_eq!(broker.get_balance("GBP")?, Num::from(10));
+        assert_eq!(broker.get_balance("USD"), Num::from(1));
+        assert_eq!(broker.get_balance("GBP"), Num::from(10));
 
         Ok(())
     }
@@ -623,21 +608,19 @@ mod tests {
     }
 
     #[test]
-    fn build_no_balance() -> Result<()> {
+    fn build_no_balance() {
         let broker = SimulatedBrokerBuilder::new("USD").build();
-        assert_eq!(broker.get_balance("USD")?, Num::from(0));
-        assert_eq!(broker.get_buying_power("USD")?, Num::from(0));
-        Ok(())
+        assert_eq!(broker.get_balance("USD"), Num::from(0));
+        assert_eq!(broker.get_buying_power("USD"), Num::from(0));
     }
 
     #[test]
-    fn build_negative_balance() -> Result<()> {
+    fn build_negative_balance() {
         let broker = SimulatedBrokerBuilder::new("USD")
             .set_balance(Num::from(-10))
             .build();
-        assert_eq!(broker.get_balance("USD")?, Num::from(-10));
-        assert_eq!(broker.get_buying_power("USD")?, Num::from(-10));
-        Ok(())
+        assert_eq!(broker.get_balance("USD"), Num::from(-10));
+        assert_eq!(broker.get_buying_power("USD"), Num::from(-10));
     }
 
     #[test]
@@ -649,24 +632,22 @@ mod tests {
             .build();
 
         assert_eq!(
-            broker.get_balance(&broker.get_currency())?,
+            broker.get_balance(&broker.get_currency()),
             Num::from_str("14.1")?
         );
         assert_eq!(
-            broker.get_buying_power(&broker.get_currency())?,
+            broker.get_buying_power(&broker.get_currency()),
             Num::from_str("14.1")?
         );
-        assert_eq!(broker.get_balance("USD")?, Num::from_str("14.1")?);
-        assert_eq!(broker.get_buying_power("USD")?, Num::from_str("14.1")?);
-        assert_eq!(broker.get_balance("USDT")?, Num::from(-10));
-        assert_eq!(broker.get_buying_power("USDT")?, Num::from(-10));
-        assert_eq!(broker.get_balance("BTC")?, Num::from(0));
-        assert_eq!(broker.get_buying_power("BTC")?, Num::from(0));
+        assert_eq!(broker.get_balance("USD"), Num::from_str("14.1")?);
+        assert_eq!(broker.get_buying_power("USD"), Num::from_str("14.1")?);
+        assert_eq!(broker.get_balance("USDT"), Num::from(-10));
+        assert_eq!(broker.get_buying_power("USDT"), Num::from(-10));
+        assert_eq!(broker.get_balance("BTC"), Num::from(0));
+        assert_eq!(broker.get_buying_power("BTC"), Num::from(0));
+        assert_eq!(broker.get_balance("GBP"), Num::from(0));
+        assert_eq!(broker.get_buying_power("GBP"), Num::from(0));
 
-        let err = broker.get_balance("GBP").unwrap_err();
-        assert_eq!(err.to_string(), "Notional asset GBP doesn't exist");
-        let err = broker.get_buying_power("GBP").unwrap_err();
-        assert_eq!(err.to_string(), "Notional asset GBP doesn't exist");
         Ok(())
     }
 }

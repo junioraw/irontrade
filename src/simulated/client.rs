@@ -38,18 +38,18 @@ impl IronTradeClient for SimulatedClient {
 
     async fn get_buying_power(&self) -> Result<GetBuyingPowerResponse> {
         Ok(GetBuyingPowerResponse {
-            buying_power: self.broker.get_buying_power(&self.broker.get_currency())?
+            buying_power: self.broker.get_buying_power(&self.broker.get_currency())
         })
     }
 
     async fn get_cash(&self) -> Result<GetCashResponse> {
         Ok(GetCashResponse {
-            cash: self.broker.get_balance(&self.broker.get_currency())?,
+            cash: self.broker.get_balance(&self.broker.get_currency()),
         })
     }
 
     async fn get_open_position(&self, asset_symbol: &str) -> Result<GetOpenPositionResponse> {
-        let balance = self.broker.get_balance(asset_symbol)?;
+        let balance = self.broker.get_balance(asset_symbol);
         let notional_per_unit = self.broker.get_notional_per_unit(&AssetPair {
             notional_asset: self.broker.get_currency(),
             quantity_asset: asset_symbol.into(),
