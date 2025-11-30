@@ -300,14 +300,14 @@ mod tests {
     use std::str::FromStr;
 
     #[test]
-    fn place_order_invalid_asset_pair() {
+    fn place_order_invalid_asset_pair() -> Result<()> {
         let mut broker = SimulatedBrokerBuilder::new("USD")
-            .set_balance(Num::from_str("14.1").unwrap())
+            .set_balance(Num::from_str("14.1")?)
             .build();
 
         let err = broker
             .place_order(OrderRequest {
-                asset_pair: AssetPair::from_str("AAPL/USD").unwrap(),
+                asset_pair: AssetPair::from_str("AAPL/USD")?,
                 amount: Amount::Quantity {
                     quantity: Num::from(10),
                 },
@@ -317,22 +317,19 @@ mod tests {
             .unwrap_err();
 
         assert_eq!(err.to_string(), "AAPL/USD does not have notional per unit");
+
+        Ok(())
     }
 
     #[test]
-    fn place_order_no_balance() {
+    fn place_order_no_balance() -> Result<()> {
         let mut broker = SimulatedBrokerBuilder::new("USD").build();
 
-        broker
-            .set_notional_per_unit(
-                AssetPair::from_str("GBP/USD").unwrap(),
-                Num::from_str("1.31").unwrap(),
-            )
-            .unwrap();
+        broker.set_notional_per_unit(AssetPair::from_str("GBP/USD")?, Num::from_str("1.31")?)?;
 
         let err = broker
             .place_order(OrderRequest {
-                asset_pair: AssetPair::from_str("GBP/USD").unwrap(),
+                asset_pair: AssetPair::from_str("GBP/USD")?,
                 amount: Amount::Quantity {
                     quantity: Num::from(10),
                 },
@@ -342,6 +339,7 @@ mod tests {
             .unwrap_err();
 
         assert_eq!(err.to_string(), "Not enough USD buying power");
+        Ok(())
     }
 
     #[test]
@@ -395,31 +393,31 @@ mod tests {
     }
 
     #[test]
-    fn place_order_returns_valid_order_id() {
+    fn place_order_returns_valid_order_id() -> Result<()> {
         let mut broker = SimulatedBrokerBuilder::new("USD")
-            .set_balance(Num::from_str("14.1").unwrap())
+            .set_balance(Num::from_str("14.1")?)
             .build();
 
         broker
             .set_notional_per_unit(
-                AssetPair::from_str("GBP/USD").unwrap(),
-                Num::from_str("1.31").unwrap(),
-            )
-            .unwrap();
+                AssetPair::from_str("GBP/USD")?,
+                Num::from_str("1.31")?,
+            )?;
 
         let order_id = broker
             .place_order(OrderRequest {
-                asset_pair: AssetPair::from_str("GBP/USD").unwrap(),
+                asset_pair: AssetPair::from_str("GBP/USD")?,
                 amount: Amount::Quantity {
                     quantity: Num::from(10),
                 },
                 limit_price: None,
                 side: OrderSide::Buy,
-            })
-            .unwrap();
+            })?;
 
-        let order = broker.get_order(&order_id).unwrap();
+        let order = broker.get_order(&order_id)?;
         assert_eq!(order.order_id, order_id);
+
+        Ok(())
     }
 
     #[test]
@@ -734,35 +732,39 @@ mod tests {
     }
 
     #[test]
-    fn set_notional_per_unit_invalid_notional_asset() {
+    fn set_notional_per_unit_invalid_notional_asset() -> Result<()> {
         let mut broker = SimulatedBrokerBuilder::new("USD")
-            .set_balance(Num::from_str("14.1").unwrap())
+            .set_balance(Num::from_str("14.1")?)
             .build();
 
         let err = broker
             .set_notional_per_unit(
-                AssetPair::from_str("GBP/USDT").unwrap(),
-                Num::from_str("1.31").unwrap(),
+                AssetPair::from_str("GBP/USDT")?,
+                Num::from_str("1.31")?,
             )
             .unwrap_err();
 
         assert_eq!(err.to_string(), "USDT is not a valid notional asset");
+
+        Ok(())
     }
 
     #[test]
-    fn set_notional_per_unit_inverted_notional_asset() {
+    fn set_notional_per_unit_inverted_notional_asset() -> Result<()> {
         let mut broker = SimulatedBrokerBuilder::new("USD")
-            .set_balance(Num::from_str("14.1").unwrap())
+            .set_balance(Num::from_str("14.1")?)
             .build();
 
         let err = broker
             .set_notional_per_unit(
-                AssetPair::from_str("USD/GBP").unwrap(),
-                Num::from_str("1.31").unwrap(),
+                AssetPair::from_str("USD/GBP")?,
+                Num::from_str("1.31")?,
             )
             .unwrap_err();
 
         assert_eq!(err.to_string(), "GBP is not a valid notional asset");
+
+        Ok(())
     }
 
     #[test]
