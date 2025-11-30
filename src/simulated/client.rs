@@ -1,4 +1,4 @@
-use crate::api::client::IronTradeClient;
+use crate::api::client::Client;
 use crate::api::common::{AssetPair, OpenPosition, Order};
 use crate::api::request::OrderRequest;
 use crate::simulated::broker::SimulatedBroker;
@@ -23,7 +23,7 @@ impl SimulatedClient {
     }
 }
 
-impl IronTradeClient for SimulatedClient {
+impl Client for SimulatedClient {
     async fn place_order(&mut self, req: OrderRequest) -> Result<String> {
         let order_id = self.broker.place_order(req)?;
         Ok(order_id)

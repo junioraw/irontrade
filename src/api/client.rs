@@ -6,7 +6,7 @@ use num_decimal::Num;
 use crate::api::common::{OpenPosition, Order};
 
 /// A trait for instances of a trading client, which allows operations with the underlying trading broker.
-pub trait IronTradeClient {
+pub trait Client {
     /// Places an order. If successful returns the order id of the newly placed order.
     fn place_order(&mut self, req: OrderRequest) -> impl Future<Output = Result<String>>;
 
