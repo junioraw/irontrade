@@ -75,16 +75,14 @@ mod tests {
     async fn buy_market_returns_order_id() -> Result<()> {
         let mut client = create_client();
 
-        let order_id = client
-            .place_order(OrderRequest {
-                asset_pair: ten_dollars_asset_pair(),
-                amount: Amount::Notional {
-                    notional: Num::from(10),
-                },
-                limit_price: None,
-                side: OrderSide::Buy,
-            })
-            .await?;
+        let order_request = OrderRequest::create_market_buy(
+            ten_dollars_asset_pair(),
+            Amount::Notional {
+                notional: Num::from(10),
+            },
+        );
+
+        let order_id = client.place_order(order_request).await?;
 
         assert_ne!(order_id, "");
 
@@ -95,26 +93,22 @@ mod tests {
     async fn sell_market_returns_order_id() -> Result<()> {
         let mut client = create_client();
 
-        client
-            .place_order(OrderRequest {
-                asset_pair: ten_dollars_asset_pair(),
-                amount: Amount::Notional {
-                    notional: Num::from(10),
-                },
-                limit_price: None,
-                side: OrderSide::Buy,
-            })
-            .await?;
-        let order_id = client
-            .place_order(OrderRequest {
-                asset_pair: ten_dollars_asset_pair(),
-                amount: Amount::Notional {
-                    notional: Num::from(10),
-                },
-                limit_price: None,
-                side: OrderSide::Sell,
-            })
-            .await?;
+        let buy_request = OrderRequest::create_market_buy(
+            ten_dollars_asset_pair(),
+            Amount::Notional {
+                notional: Num::from(10),
+            },
+        );
+
+        client.place_order(buy_request).await?;
+
+        let sell_request = OrderRequest::create_market_sell(
+            ten_dollars_asset_pair(),
+            Amount::Notional {
+                notional: Num::from(10),
+            },
+        );
+        let order_id = client.place_order(sell_request).await?;
 
         assert_ne!(order_id, "");
 
@@ -127,79 +121,72 @@ mod tests {
 
         assert_eq!(client.get_orders().await?.len(), 0);
 
-        let buy_order_id = client
-            .place_order(OrderRequest {
-                asset_pair: ten_dollars_asset_pair(),
-                amount: Amount::Notional {
-                    notional: Num::from(10),
-                },
-                limit_price: None,
-                side: OrderSide::Buy,
-            })
-            .await?;
+        let buy_request = OrderRequest::create_market_buy(
+            ten_dollars_asset_pair(),
+            Amount::Notional {
+                notional: Num::from(10),
+            },
+        );
+
+        let buy_order_id = client.place_order(buy_request).await?;
 
         assert_eq!(client.get_orders().await?.len(), 1);
 
-        let sell_order_id = client
-            .place_order(OrderRequest {
-                asset_pair: ten_dollars_asset_pair(),
-                amount: Amount::Notional {
-                    notional: Num::from(10),
-                },
-                limit_price: None,
-                side: OrderSide::Sell,
-            })
-            .await?;
+        let sell_request = OrderRequest::create_market_sell(
+            ten_dollars_asset_pair(),
+            Amount::Notional {
+                notional: Num::from(10),
+            },
+        );
+
+        let sell_order_id = client.place_order(sell_request).await?;
 
         assert_eq!(client.get_orders().await?.len(), 2);
 
-        assert_eq!(
-            client
-                .get_orders()
-                .await?
-                .iter()
-                .filter(|order| order.order_id == buy_order_id)
-                .map(Order::clone)
-                .last()
-                .unwrap(),
-            Order {
-                order_id: buy_order_id,
-                asset_symbol: TEN_DOLLARS_COIN_PAIR.into(),
-                amount: Amount::Notional {
-                    notional: Num::from(10),
-                },
-                limit_price: None,
-                filled_quantity: Num::from(1),
-                average_fill_price: Some(Num::from(10)),
-                status: OrderStatus::Filled,
-                type_: OrderType::Market,
-                side: OrderSide::Buy
-            }
-        );
+        let orders = client
+            .get_orders()
+            .await?
+            .iter()
+            .map(Order::clone)
+            .collect::<Vec<Order>>();
 
-        assert_eq!(
-            client
-                .get_orders()
-                .await?
-                .iter()
-                .filter(|order| order.order_id == sell_order_id)
-                .map(Order::clone)
-                .last()
-                .unwrap(),
-            Order {
-                order_id: sell_order_id,
-                asset_symbol: TEN_DOLLARS_COIN_PAIR.into(),
-                amount: Amount::Notional {
-                    notional: Num::from(10),
-                },
-                limit_price: None,
-                filled_quantity: Num::from(1),
-                average_fill_price: Some(Num::from(10)),
-                status: OrderStatus::Filled,
-                type_: OrderType::Market,
-                side: OrderSide::Sell,
-            }
-        );
+        let buy_order = orders
+            .iter()
+            .filter(|order| order.order_id == buy_order_id)
+            .map(Order::clone)
+            .last()
+            .unwrap();
+
+        let expected_order = Order {
+            order_id: buy_order_id,
+            asset_symbol: TEN_DOLLARS_COIN_PAIR.into(),
+            amount: Amount::Notional {
+                notional: Num::from(10),
+            },
+            limit_price: None,
+            filled_quantity: Num::from(1),
+            average_fill_price: Some(Num::from(10)),
+            status: OrderStatus::Filled,
+            type_: OrderType::Market,
+            side: OrderSide::Buy,
+        };
+
+        assert_eq!(buy_order, expected_order,);
+
+        let sell_order = orders
+            .iter()
+            .filter(|order| order.order_id == sell_order_id)
+            .map(Order::clone)
+            .last()
+            .unwrap();
+
+        let expected_order = Order {
+            order_id: sell_order_id,
+            side: OrderSide::Sell,
+            ..expected_order
+        };
+
+        assert_eq!(sell_order, expected_order,);
 
         Ok(())
     }
@@ -210,29 +197,24 @@ mod tests {
 
         assert_eq!(client.get_cash().await?, Num::from(1000));
 
-        client
-            .place_order(OrderRequest {
-                asset_pair: ten_dollars_asset_pair(),
-                amount: Amount::Notional {
-                    notional: Num::from(10),
-                },
-                limit_price: None,
-                side: OrderSide::Buy,
-            })
-            .await?;
+        let order_request = OrderRequest::create_market_buy(
+            ten_dollars_asset_pair(),
+            Amount::Notional {
+                notional: Num::from(10),
+            },
+        );
+
+        client.place_order(order_request).await?;
 
         assert_eq!(client.get_cash().await?, Num::from(990));
 
-        client
-            .place_order(OrderRequest {
-                asset_pair: ten_dollars_asset_pair(),
-                amount: Amount::Notional {
-                    notional: Num::from(5),
-                },
-                limit_price: None,
-                side: OrderSide::Sell,
-            })
-            .await?;
+        let order_request = OrderRequest::create_market_sell(
+            ten_dollars_asset_pair(),
+            Amount::Notional {
+                notional: Num::from(5),
+            },
+        );
+        client.place_order(order_request).await?;
 
         assert_eq!(client.get_cash().await?, Num::from(995));
 
@@ -240,11 +222,11 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn get_open_position() {
+    async fn get_open_position() -> Result<()> {
         let mut client = create_client();
 
         assert_eq!(
-            client.get_open_position(TEN_DOLLARS_COIN).await.unwrap(),
+            client.get_open_position(TEN_DOLLARS_COIN).await?,
             OpenPosition {
                 asset_symbol: TEN_DOLLARS_COIN.into(),
                 average_entry_price: None,
@@ -253,49 +235,45 @@ mod tests {
             }
         );
 
-        client
-            .place_order(OrderRequest {
-                asset_pair: ten_dollars_asset_pair(),
-                amount: Amount::Notional {
-                    notional: Num::from(15),
-                },
-                limit_price: None,
-                side: OrderSide::Buy,
-            })
-            .await
-            .unwrap();
+        let order_request = OrderRequest::create_market_buy(
+            ten_dollars_asset_pair(),
+            Amount::Notional {
+                notional: Num::from(15),
+            },
+        );
+
+        client.place_order(order_request).await?;
 
         assert_eq!(
-            client.get_open_position(TEN_DOLLARS_COIN).await.unwrap(),
+            client.get_open_position(TEN_DOLLARS_COIN).await?,
             OpenPosition {
                 asset_symbol: TEN_DOLLARS_COIN.into(),
                 average_entry_price: None,
-                quantity: Num::from_str("1.5").unwrap(),
+                quantity: Num::from_str("1.5")?,
                 market_value: Some(Num::from(15)),
             }
         );
 
-        client
-            .place_order(OrderRequest {
-                asset_pair: ten_dollars_asset_pair(),
-                amount: Amount::Notional {
-                    notional: Num::from(10),
-                },
-                limit_price: None,
-                side: OrderSide::Sell,
-            })
-            .await
-            .unwrap();
+        let order_request = OrderRequest::create_market_sell(
+            ten_dollars_asset_pair(),
+            Amount::Notional {
+                notional: Num::from(10),
+            },
+        );
+
+        client.place_order(order_request).await?;
 
         assert_eq!(
-            client.get_open_position(TEN_DOLLARS_COIN).await.unwrap(),
+            client.get_open_position(TEN_DOLLARS_COIN).await?,
             OpenPosition {
                 asset_symbol: TEN_DOLLARS_COIN.into(),
                 average_entry_price: None,
-                quantity: Num::from_str("0.5").unwrap(),
+                quantity: Num::from_str("0.5")?,
                 market_value: Some(Num::from(5)),
             }
         );
+
+        Ok(())
     }
 
     fn create_client() -> SimulatedClient {

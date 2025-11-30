@@ -305,16 +305,14 @@ mod tests {
             .set_balance(Num::from_str("14.1")?)
             .build();
 
-        let err = broker
-            .place_order(OrderRequest {
-                asset_pair: AssetPair::from_str("AAPL/USD")?,
-                amount: Amount::Quantity {
-                    quantity: Num::from(10),
-                },
-                limit_price: None,
-                side: OrderSide::Buy,
-            })
-            .unwrap_err();
+        let order_request = OrderRequest::create_market_buy(
+            AssetPair::from_str("AAPL/USD")?,
+            Amount::Quantity {
+                quantity: Num::from(10),
+            },
+        );
+
+        let err = broker.place_order(order_request).unwrap_err();
 
         assert_eq!(err.to_string(), "AAPL/USD does not have notional per unit");
 
@@ -327,16 +325,14 @@ mod tests {
 
         broker.set_notional_per_unit(AssetPair::from_str("GBP/USD")?, Num::from_str("1.31")?)?;
 
-        let err = broker
-            .place_order(OrderRequest {
-                asset_pair: AssetPair::from_str("GBP/USD")?,
-                amount: Amount::Quantity {
-                    quantity: Num::from(10),
-                },
-                limit_price: None,
-                side: OrderSide::Buy,
-            })
-            .unwrap_err();
+        let order_request = OrderRequest::create_market_buy(
+            AssetPair::from_str("GBP/USD")?,
+            Amount::Quantity {
+                quantity: Num::from(10),
+            },
+        );
+
+        let err = broker.place_order(order_request).unwrap_err();
 
         assert_eq!(err.to_string(), "Not enough USD buying power");
         Ok(())
@@ -350,16 +346,14 @@ mod tests {
 
         broker.update_balance("USD", Num::from_str("13.09")?);
 
-        let err = broker
-            .place_order(OrderRequest {
-                asset_pair: AssetPair::from_str("GBP/USD")?,
-                amount: Amount::Quantity {
-                    quantity: Num::from(10),
-                },
-                limit_price: None,
-                side: OrderSide::Buy,
-            })
-            .unwrap_err();
+        let order_request = OrderRequest::create_market_buy(
+            AssetPair::from_str("GBP/USD")?,
+            Amount::Quantity {
+                quantity: Num::from(10),
+            },
+        );
+
+        let err = broker.place_order(order_request).unwrap_err();
 
         assert_eq!(err.to_string(), "Not enough USD buying power");
 
@@ -375,14 +369,14 @@ mod tests {
         let _ =
             broker.set_notional_per_unit(AssetPair::from_str("GBP/USD")?, Num::from_str("1.31")?);
 
-        broker.place_order(OrderRequest {
-            asset_pair: AssetPair::from_str("GBP/USD")?,
-            amount: Amount::Quantity {
+        let order_request = OrderRequest::create_market_buy(
+            AssetPair::from_str("GBP/USD")?,
+            Amount::Quantity {
                 quantity: Num::from(10),
             },
-            limit_price: None,
-            side: OrderSide::Buy,
-        })?;
+        );
+
+        broker.place_order(order_request)?;
 
         assert_eq!(broker.get_balance("USD"), Num::from(1));
         assert_eq!(broker.get_buying_power("USD"), Num::from(1));
@@ -398,23 +392,18 @@ mod tests {
             .set_balance(Num::from_str("14.1")?)
             .build();
 
-        broker
-            .set_notional_per_unit(
-                AssetPair::from_str("GBP/USD")?,
-                Num::from_str("1.31")?,
-            )?;
+        broker.set_notional_per_unit(AssetPair::from_str("GBP/USD")?, Num::from_str("1.31")?)?;
 
-        let order_id = broker
-            .place_order(OrderRequest {
-                asset_pair: AssetPair::from_str("GBP/USD")?,
-                amount: Amount::Quantity {
-                    quantity: Num::from(10),
-                },
-                limit_price: None,
-                side: OrderSide::Buy,
-            })?;
+        let order_request = OrderRequest::create_market_buy(
+            AssetPair::from_str("GBP/USD")?,
+            Amount::Quantity {
+                quantity: Num::from(10),
+            },
+        );
 
+        let order_id = broker.place_order(order_request)?;
         let order = broker.get_order(&order_id)?;
+
         assert_eq!(order.order_id, order_id);
 
         Ok(())
@@ -426,37 +415,37 @@ mod tests {
             .set_balance(Num::from_str("14.1")?)
             .build();
 
-        broker.set_notional_per_unit(AssetPair::from_str("GBP/USD")?, Num::from_str("1.31")?)?;
+        broker.set_notional_per_unit(AssetPair::from_str("GBP/USD")?, Num::from_str("1.32")?)?;
 
-        let order_id = broker.place_order(OrderRequest {
-            asset_pair: AssetPair::from_str("GBP/USD")?,
+        let order_request = OrderRequest::create_market_buy(
+            AssetPair::from_str("GBP/USD")?,
+            Amount::Quantity {
+                quantity: Num::from(10),
+            },
+        );
+
+        let order_id = broker.place_order(order_request)?;
+
+        let actual_order = broker.get_order(&order_id)?;
+
+        let expected_order = Order {
+            order_id,
+            asset_symbol: "GBP/USD".into(),
             amount: Amount::Quantity {
                 quantity: Num::from(10),
             },
             limit_price: None,
+            filled_quantity: Num::from(10),
+            average_fill_price: Some(Num::from_str("1.32")?),
+            status: OrderStatus::Filled,
+            type_: OrderType::Market,
             side: OrderSide::Buy,
-        })?;
+        };
 
-        let order = broker.get_order(&order_id)?;
-        assert_eq!(
-            order,
-            Order {
-                order_id,
-                asset_symbol: "GBP/USD".into(),
-                amount: Amount::Quantity {
-                    quantity: Num::from(10),
-                },
-                limit_price: None,
-                filled_quantity: Num::from(10),
-                average_fill_price: Some(Num::from_str("1.31")?),
-                status: OrderStatus::Filled,
-                type_: OrderType::Market,
-                side: OrderSide::Buy,
-            }
-        );
+        assert_eq!(actual_order, expected_order);
 
-        assert_eq!(broker.get_balance("USD"), Num::from(1));
-        assert_eq!(broker.get_buying_power("USD"), Num::from(1));
+        assert_eq!(broker.get_balance("USD"), Num::from_str("0.9")?);
+        assert_eq!(broker.get_buying_power("USD"), Num::from_str("0.9")?);
         assert_eq!(broker.get_balance("GBP"), Num::from(10));
         assert_eq!(broker.get_buying_power("GBP"), Num::from(10));
 
@@ -472,32 +461,32 @@ mod tests {
         broker.update_balance("GBP", Num::from(11));
         broker.update_buying_power("GBP", Num::from(11));
 
-        let order_id = broker.place_order(OrderRequest {
-            asset_pair: AssetPair::from_str("GBP/USD")?,
+        let order_request = OrderRequest::create_market_sell(
+            AssetPair::from_str("GBP/USD")?,
+            Amount::Quantity {
+                quantity: Num::from(10),
+            },
+        );
+
+        let order_id = broker.place_order(order_request)?;
+
+        let actual_order = broker.get_order(&order_id)?;
+
+        let expected_order = Order {
+            order_id,
+            asset_symbol: "GBP/USD".into(),
             amount: Amount::Quantity {
                 quantity: Num::from(10),
             },
             limit_price: None,
+            filled_quantity: Num::from(10),
+            average_fill_price: Some(Num::from_str("1.31")?),
+            status: OrderStatus::Filled,
+            type_: OrderType::Market,
             side: OrderSide::Sell,
-        })?;
+        };
 
-        let order = broker.get_order(&order_id)?;
-        assert_eq!(
-            order,
-            Order {
-                order_id,
-                asset_symbol: "GBP/USD".into(),
-                amount: Amount::Quantity {
-                    quantity: Num::from(10),
-                },
-                limit_price: None,
-                filled_quantity: Num::from(10),
-                average_fill_price: Some(Num::from_str("1.31")?),
-                status: OrderStatus::Filled,
-                type_: OrderType::Market,
-                side: OrderSide::Sell,
-            }
-        );
+        assert_eq!(actual_order, expected_order);
 
         assert_eq!(broker.get_balance("USD"), Num::from_str("13.1")?);
         assert_eq!(broker.get_buying_power("USD"), Num::from_str("13.1")?);
@@ -515,14 +504,15 @@ mod tests {
 
         broker.set_notional_per_unit(AssetPair::from_str("GBP/USD")?, Num::from_str("1.31")?)?;
 
-        let order_id = broker.place_order(OrderRequest {
-            asset_pair: AssetPair::from_str("GBP/USD")?,
-            amount: Amount::Quantity {
+        let order_request = OrderRequest::create_limit_buy(
+            AssetPair::from_str("GBP/USD")?,
+            Amount::Quantity {
                 quantity: Num::from(10),
             },
-            limit_price: Some(Num::from_str("1.3")?),
-            side: OrderSide::Buy,
-        })?;
+            Num::from_str("1.3")?,
+        );
+
+        let order_id = broker.place_order(order_request)?;
 
         let order = broker.get_order(&order_id)?;
         assert_eq!(
@@ -584,14 +574,15 @@ mod tests {
         broker.update_balance("GBP", Num::from(12));
         broker.update_buying_power("GBP", Num::from(12));
 
-        let order_id = broker.place_order(OrderRequest {
-            asset_pair: AssetPair::from_str("GBP/USD")?,
-            amount: Amount::Quantity {
+        let order_request = OrderRequest::create_limit_buy(
+            AssetPair::from_str("GBP/USD")?,
+            Amount::Quantity {
                 quantity: Num::from(10),
             },
-            limit_price: Some(Num::from_str("1.32")?),
-            side: OrderSide::Sell,
-        })?;
+            Num::from_str("1.32")?,
+        );
+
+        let order_id = broker.place_order(order_request)?;
 
         let order = broker.get_order(&order_id)?;
         assert_eq!(
@@ -652,14 +643,15 @@ mod tests {
 
         broker.set_notional_per_unit(AssetPair::from_str("GBP/USD")?, Num::from_str("1.31")?)?;
 
-        let order_id = broker.place_order(OrderRequest {
-            asset_pair: AssetPair::from_str("GBP/USD")?,
-            amount: Amount::Quantity {
+        let order_request = OrderRequest::create_limit_buy(
+            AssetPair::from_str("GBP/USD")?,
+            Amount::Quantity {
                 quantity: Num::from(10),
             },
-            limit_price: Some(Num::from_str("1.4")?),
-            side: OrderSide::Buy,
-        })?;
+            Num::from_str("1.4")?,
+        );
+
+        let order_id = broker.place_order(order_request)?;
 
         let order = broker.get_order(&order_id)?;
         assert_eq!(
@@ -696,14 +688,15 @@ mod tests {
         broker.update_balance("GBP", Num::from_str("10.5")?);
         broker.update_buying_power("GBP", Num::from_str("10.5")?);
 
-        let order_id = broker.place_order(OrderRequest {
-            asset_pair: AssetPair::from_str("GBP/USD")?,
-            amount: Amount::Quantity {
+        let order_request = OrderRequest::create_limit_buy(
+            AssetPair::from_str("GBP/USD")?,
+            Amount::Quantity {
                 quantity: Num::from(10),
             },
-            limit_price: Some(Num::from_str("1.25")?),
-            side: OrderSide::Sell,
-        })?;
+            Num::from_str("1.25")?,
+        );
+
+        let order_id = broker.place_order(order_request)?;
 
         let order = broker.get_order(&order_id)?;
         assert_eq!(
@@ -738,10 +731,7 @@ mod tests {
             .build();
 
         let err = broker
-            .set_notional_per_unit(
-                AssetPair::from_str("GBP/USDT")?,
-                Num::from_str("1.31")?,
-            )
+            .set_notional_per_unit(AssetPair::from_str("GBP/USDT")?, Num::from_str("1.31")?)
             .unwrap_err();
 
         assert_eq!(err.to_string(), "USDT is not a valid notional asset");
@@ -756,10 +746,7 @@ mod tests {
             .build();
 
         let err = broker
-            .set_notional_per_unit(
-                AssetPair::from_str("USD/GBP")?,
-                Num::from_str("1.31")?,
-            )
+            .set_notional_per_unit(AssetPair::from_str("USD/GBP")?, Num::from_str("1.31")?)
             .unwrap_err();
 
         assert_eq!(err.to_string(), "GBP is not a valid notional asset");
