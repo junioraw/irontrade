@@ -12,6 +12,9 @@ pub trait Client {
 
     /// Returns all placed orders.
     fn get_orders(&self) -> impl Future<Output = Result<Vec<Order>>> + Send;
+    
+    /// Returns an order by id.
+    fn get_order(&self, order_id: &str) -> impl Future<Output = Result<Order>> + Send;
 
     /// Returns buying power.
     fn get_buying_power(&self) -> impl Future<Output = Result<Num>> + Send;

@@ -34,6 +34,11 @@ impl Client for SimulatedClient {
         Ok(orders)
     }
 
+    async fn get_order(&self, order_id: &str) -> Result<Order> {
+        let order = self.broker.get_order(order_id)?;
+        Ok(order)
+    }
+
     async fn get_buying_power(&self) -> Result<Num> {
         let buying_power = self.broker.get_buying_power(&self.broker.get_currency());
         Ok(buying_power)
@@ -143,19 +148,7 @@ mod tests {
 
         assert_eq!(client.get_orders().await?.len(), 2);
 
-        let orders = client
-            .get_orders()
-            .await?
-            .iter()
-            .map(Order::clone)
-            .collect::<Vec<Order>>();
-
-        let buy_order = orders
-            .iter()
-            .filter(|order| order.order_id == buy_order_id)
-            .map(Order::clone)
-            .last()
-            .unwrap();
+        let buy_order = client.get_order(&buy_order_id).await?;
 
         let expected_order = Order {
             order_id: buy_order_id,
@@ -173,12 +166,7 @@ mod tests {
 
         assert_eq!(buy_order, expected_order,);
 
-        let sell_order = orders
-            .iter()
-            .filter(|order| order.order_id == sell_order_id)
-            .map(Order::clone)
-            .last()
-            .unwrap();
+        let sell_order = client.get_order(&sell_order_id).await?;
 
         let expected_order = Order {
             order_id: sell_order_id,

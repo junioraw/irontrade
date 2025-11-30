@@ -217,7 +217,7 @@ impl SimulatedBroker {
         self.orders.values().cloned().collect()
     }
 
-    pub fn get_order(&self, order_id: &String) -> Result<Order> {
+    pub fn get_order(&self, order_id: &str) -> Result<Order> {
         self.orders
             .get(order_id)
             .map(Order::clone)
