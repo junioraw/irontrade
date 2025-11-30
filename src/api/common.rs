@@ -4,6 +4,7 @@ use num_decimal::Num;
 use std::fmt::{Display, Formatter};
 use std::str::FromStr;
 use std::string::ParseError;
+use chrono::{DateTime, Utc};
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Order {
@@ -74,6 +75,14 @@ pub struct AssetPair {
     pub notional_asset: String,
     /// A quantifiable asset, like a stock or a crypto coin.
     pub quantity_asset: String,
+}
+
+pub struct Bar {
+    pub low: Num,
+    pub high: Num,
+    pub open: Num,
+    pub close: Num,
+    pub date_time: DateTime<Utc>,
 }
 
 impl FromStr for AssetPair {
