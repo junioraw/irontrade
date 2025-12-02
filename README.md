@@ -4,7 +4,7 @@ irontrade
 - [Documentation][docs-rs]
 - [Changelog](CHANGELOG.md)
 
-**irontrade** is a crate for simulating trading with custom data providers. It publishes a trading driver, simulated environment and a trading interface to easily plug tested strategies into actual trading clients.
+**irontrade** is a crate for simulating trading with custom data providers. It publishes a simulated environment and a trading interface to easily plug tested strategies into actual trading clients.
 
 Usage
 ----
