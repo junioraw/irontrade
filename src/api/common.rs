@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
+use std::collections::HashMap;
 use num_decimal::Num;
 use std::fmt::{Display, Formatter};
 use std::str::FromStr;
@@ -7,7 +8,7 @@ use std::string::ParseError;
 use chrono::{DateTime, Utc};
 
 pub struct Account {
-    pub position: OpenPosition,
+    pub open_positions: HashMap<String, OpenPosition>,
     pub cash: Num,
     pub currency: String,
     pub buying_power: Num,

@@ -268,6 +268,10 @@ impl SimulatedBroker {
         Ok(())
     }
 
+    pub fn get_purchased_asset_symbols(&self) -> HashSet<String> {
+        self.balances.keys().filter(|&symbol| *symbol != self.currency).cloned().collect()
+    }
+
     fn check_notional(&self, asset_pair: &AssetPair) -> Result<()> {
         if !self.notional_assets.contains(&asset_pair.notional_asset) {
             return Err(format_err!(
@@ -803,6 +807,21 @@ mod tests {
         assert_eq!(broker.get_balance("GBP"), Num::from(0));
         assert_eq!(broker.get_buying_power("GBP"), Num::from(0));
 
+        Ok(())
+    }
+
+    #[test]
+    fn get_purchased_asset_symbols() -> Result<()> {
+        let broker = SimulatedBrokerBuilder::new("USD")
+            .set_balance(Num::from_str("15.1")?)
+            .add_notional_asset("BTC", None)
+            .add_notional_asset("ETH", Some(Num::from(20)))
+            .add_notional_asset("USDT", Some(Num::from(-10)))
+            .build();
+        let symbols = broker.get_purchased_asset_symbols();
+        assert_eq!(symbols.len(), 2);
+        assert!(symbols.contains("ETH"));
+        assert!(symbols.contains("USDT"));
         Ok(())
     }
 }

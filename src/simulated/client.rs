@@ -4,6 +4,7 @@ use crate::api::request::OrderRequest;
 use crate::simulated::broker::SimulatedBroker;
 use anyhow::Result;
 use num_decimal::Num;
+use std::collections::HashMap;
 
 pub struct SimulatedClient {
     broker: SimulatedBroker,
@@ -23,6 +24,23 @@ impl SimulatedClient {
     }
 }
 
+impl SimulatedClient {
+    fn get_open_position(&self, asset_symbol: &str) -> Result<OpenPosition> {
+        let balance = self.broker.get_balance(asset_symbol);
+        let notional_per_unit = self.broker.get_notional_per_unit(&AssetPair {
+            notional_asset: self.broker.get_currency(),
+            quantity_asset: asset_symbol.into(),
+        })?;
+        let open_position = OpenPosition {
+            asset_symbol: asset_symbol.into(),
+            quantity: balance.clone(),
+            average_entry_price: None,
+            market_value: Some(balance * notional_per_unit),
+        };
+        Ok(open_position)
+    }
+}
+
 impl Client for SimulatedClient {
     async fn place_order(&mut self, req: OrderRequest) -> Result<String> {
         let order_id = self.broker.place_order(req)?;
@@ -39,38 +57,17 @@ impl Client for SimulatedClient {
         Ok(order)
     }
 
-    async fn get_buying_power(&self) -> Result<Num> {
-        let buying_power = self.broker.get_buying_power(&self.broker.get_currency());
-        Ok(buying_power)
-    }
-
-    async fn get_cash(&self) -> Result<Num> {
-        let cash_balance = self.broker.get_balance(&self.broker.get_currency());
-        Ok(cash_balance)
-    }
-
-    async fn get_open_position(&self, asset_symbol: &str) -> Result<OpenPosition> {
-        let balance = self.broker.get_balance(asset_symbol);
-        let notional_per_unit = self.broker.get_notional_per_unit(&AssetPair {
-            notional_asset: self.broker.get_currency(),
-            quantity_asset: asset_symbol.into(),
-        })?;
-        let open_position = OpenPosition {
-            asset_symbol: asset_symbol.into(),
-            quantity: balance.clone(),
-            average_entry_price: None,
-            market_value: Some(balance * notional_per_unit),
-        };
-        Ok(open_position)
-    }
-
     async fn get_account(&self) -> Result<Account> {
         let currency = &self.broker.get_currency();
-        let open_position = self.get_open_position(currency).await?;
+        let mut open_positions = HashMap::new();
+        for symbol in self.broker.get_purchased_asset_symbols() {
+            let open_position = self.get_open_position(&symbol)?;
+            open_positions.insert(symbol, open_position);
+        }
         let cash = self.broker.get_balance(currency);
         let buying_power = self.broker.get_buying_power(currency);
         let account = Account {
-            position: open_position,
+            open_positions,
             cash,
             buying_power,
             currency: currency.into(),
@@ -197,7 +194,7 @@ mod tests {
     async fn get_cash_returns_current_balance() -> Result<()> {
         let mut client = create_client();
 
-        assert_eq!(client.get_cash().await?, Num::from(1000));
+        assert_eq!(client.get_account().await?.cash, Num::from(1000));
 
         let order_request = OrderRequest::create_market_buy(
             ten_dollars_asset_pair(),
@@ -208,7 +205,7 @@ mod tests {
 
         client.place_order(order_request).await?;
 
-        assert_eq!(client.get_cash().await?, Num::from(990));
+        assert_eq!(client.get_account().await?.cash, Num::from(990));
 
         let order_request = OrderRequest::create_market_sell(
             ten_dollars_asset_pair(),
@@ -218,7 +215,7 @@ mod tests {
         );
         client.place_order(order_request).await?;
 
-        assert_eq!(client.get_cash().await?, Num::from(995));
+        assert_eq!(client.get_account().await?.cash, Num::from(995));
 
         Ok(())
     }
@@ -228,13 +225,12 @@ mod tests {
         let mut client = create_client();
 
         assert_eq!(
-            client.get_open_position(TEN_DOLLARS_COIN).await?,
-            OpenPosition {
-                asset_symbol: TEN_DOLLARS_COIN.into(),
-                average_entry_price: None,
-                quantity: Num::from(0),
-                market_value: Some(Num::from(0)),
-            }
+            client
+                .get_account()
+                .await?
+                .open_positions
+                .get(TEN_DOLLARS_COIN),
+            None
         );
 
         let order_request = OrderRequest::create_market_buy(
@@ -247,7 +243,7 @@ mod tests {
         client.place_order(order_request).await?;
 
         assert_eq!(
-            client.get_open_position(TEN_DOLLARS_COIN).await?,
+            client.get_account().await?.open_positions[TEN_DOLLARS_COIN],
             OpenPosition {
                 asset_symbol: TEN_DOLLARS_COIN.into(),
                 average_entry_price: None,
@@ -266,7 +262,7 @@ mod tests {
         client.place_order(order_request).await?;
 
         assert_eq!(
-            client.get_open_position(TEN_DOLLARS_COIN).await?,
+            client.get_account().await?.open_positions[TEN_DOLLARS_COIN],
             OpenPosition {
                 asset_symbol: TEN_DOLLARS_COIN.into(),
                 average_entry_price: None,
@@ -278,7 +274,7 @@ mod tests {
         Ok(())
     }
 
-    fn create_client() -> SimulatedClient {
+    fn create_client() -> impl Client {
         let broker = SimulatedBrokerBuilder::new("USD")
             .set_balance(Num::from(1000))
             .build();
