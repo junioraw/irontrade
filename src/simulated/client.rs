@@ -65,7 +65,17 @@ impl Client for SimulatedClient {
     }
 
     async fn get_account(&self) -> Result<Account> {
-        todo!()
+        let currency = &self.broker.get_currency();
+        let open_position = self.get_open_position(currency).await?;
+        let cash = self.broker.get_balance(currency);
+        let buying_power = self.broker.get_buying_power(currency);
+        let account = Account {
+            position: open_position,
+            cash,
+            buying_power,
+            currency: currency.into(),
+        };
+        Ok(account)
     }
 }
 
