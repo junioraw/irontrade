@@ -1,5 +1,5 @@
 use crate::api::client::Client;
-use crate::api::common::{AssetPair, OpenPosition, Order};
+use crate::api::common::{Account, AssetPair, OpenPosition, Order};
 use crate::api::request::OrderRequest;
 use crate::simulated::broker::SimulatedBroker;
 use anyhow::Result;
@@ -62,6 +62,10 @@ impl Client for SimulatedClient {
             market_value: Some(balance * notional_per_unit),
         };
         Ok(open_position)
+    }
+
+    async fn get_account(&self) -> Result<Account> {
+        todo!()
     }
 }
 

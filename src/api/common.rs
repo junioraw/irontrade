@@ -6,6 +6,13 @@ use std::str::FromStr;
 use std::string::ParseError;
 use chrono::{DateTime, Utc};
 
+pub struct Account {
+    pub position: OpenPosition,
+    pub cash: Num,
+    pub currency: String,
+    pub buying_power: Num,
+}
+
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Order {
     pub order_id: String,

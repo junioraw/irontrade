@@ -3,7 +3,7 @@
 use crate::api::request::OrderRequest;
 use anyhow::Result;
 use num_decimal::Num;
-use crate::api::common::{OpenPosition, Order};
+use crate::api::common::{Account, OpenPosition, Order};
 
 /// A trait for instances of a trading client, which allows operations with the underlying trading broker.
 pub trait Client {
@@ -28,4 +28,6 @@ pub trait Client {
         &self,
         asset_symbol: &str,
     ) -> impl Future<Output = Result<OpenPosition>> + Send;
+    
+    fn get_account(&self) -> impl Future<Output = Result<Account>> + Send;
 }
