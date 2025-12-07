@@ -9,3 +9,8 @@ pub trait Market {
         asset_pair: &AssetPair,
     ) -> impl Future<Output = Result<Bar>> + Send;
 }
+
+pub trait Watcher {
+    fn wait_for_next_bar(&self, asset_pair: &AssetPair)
+    -> impl Future<Output = Result<Bar>> + Send;
+}
