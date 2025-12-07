@@ -3,13 +3,17 @@
 use crate::api::client::Client;
 use crate::api::common::{Account, AssetPair, Bar, Order};
 use crate::api::environment::Environment;
-use crate::api::market::{Market, Watcher};
+use crate::api::market::Market;
 use crate::api::request::OrderRequest;
 use crate::simulated::client::SimulatedClient;
+use crate::simulated::data::BarDataSource;
+use crate::simulated::time::Clock;
 use anyhow::Result;
 
 pub struct SimulatedEnvironment {
-    pub client: SimulatedClient
+    pub client: SimulatedClient,
+    pub data_source: BarDataSource,
+    pub clock: dyn Clock + Send + Sync,
 }
 
 impl Client for SimulatedEnvironment {
@@ -31,14 +35,8 @@ impl Client for SimulatedEnvironment {
 }
 
 impl Market for SimulatedEnvironment {
-    async fn get_latest_minute_bar(&self, asset_pair: &AssetPair) -> Result<Bar> {
-        todo!()
-    }
-}
-
-impl Watcher for SimulatedEnvironment {
-    async fn wait_for_next_bar(&self, asset_pair: &AssetPair) -> Result<Bar> {
-        todo!()
+    async fn get_latest_bar(&self, asset_pair: &AssetPair) -> Result<Option<Bar>> {
+        Ok(self.data_source.get_bar(asset_pair, &self.clock.now()))
     }
 }
 

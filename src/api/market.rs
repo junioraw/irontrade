@@ -4,13 +4,8 @@ use crate::api::common::{AssetPair, Bar};
 use anyhow::Result;
 
 pub trait Market {
-    fn get_latest_minute_bar(
+    fn get_latest_bar(
         &self,
         asset_pair: &AssetPair,
-    ) -> impl Future<Output = Result<Bar>> + Send;
-}
-
-pub trait Watcher {
-    fn wait_for_next_bar(&self, asset_pair: &AssetPair)
-    -> impl Future<Output = Result<Bar>> + Send;
+    ) -> impl Future<Output = Result<Option<Bar>>> + Send;
 }
