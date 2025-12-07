@@ -93,14 +93,6 @@ pub struct Bar {
     pub date_time: DateTime<Utc>,
 }
 
-pub struct Quote {
-    pub ask_price: Num,
-    pub bid_price: Num,
-    pub ask_size: Num,
-    pub bid_size: Num,
-    pub date_time: DateTime<Utc>,
-}
-
 impl FromStr for AssetPair {
     type Err = ParseError;
 

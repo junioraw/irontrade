@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-use crate::api::common::{AssetPair, Bar, Quote};
+use crate::api::common::{AssetPair, Bar};
 use anyhow::Result;
 
 pub trait Market {
@@ -8,8 +8,4 @@ pub trait Market {
         &self,
         asset_pair: &AssetPair,
     ) -> impl Future<Output = Result<Bar>> + Send;
-    fn get_latest_quotes(
-        &self,
-        asset_pair: &AssetPair,
-    ) -> impl Future<Output = Result<Quote>> + Send;
 }
