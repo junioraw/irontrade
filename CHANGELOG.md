@@ -1,10 +1,14 @@
+0.5.1
+----
+- Make mod `api::environment` public
+
 0.5.0
 ----
 - Rename `IronTradeClient` to `Client`
-- Add `api::Market` interface
-- Add `api::Environment` interface
+- Add `api::market::Market` interface
+- Add `api::environment::Environment` interface
 - Add `Client.get_order(order_id)` function
-- Add `Account` struct and `Client.get_account` function
+- Add `api::common::Account` struct and `Client.get_account` function
 - Remove `Client.get_buying_power`, `Client.get_cash` and `Client.get_open_position` as those fields are all now part of `Account struct`
 
 0.4.0

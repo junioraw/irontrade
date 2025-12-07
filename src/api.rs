@@ -4,4 +4,4 @@ pub mod client;
 pub mod request;
 pub mod common;
 pub mod market;
-mod environment;
+pub mod environment;
