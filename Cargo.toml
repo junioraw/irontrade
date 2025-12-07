@@ -4,7 +4,7 @@ version = "0.5.1"
 edition = "2024"
 license = "GPL-3.0-or-later"
 description = """
-Rust crate with a simulated environment and a trading interface
+Library crate with a trading interface and simulated environment
 """
 repository = "https://github.com/junioraw/irontrade"
 
