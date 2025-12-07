@@ -1,5 +1,14 @@
+0.5.0
+----
+- Rename `IronTradeClient` to `Client`
+- Add `api::Market` interface
+- Add `api::Environment` interface
+- Add `Client.get_order(order_id)` function
+- Add `Account` struct and `Client.get_account` function
+- Remove `Client.get_buying_power`, `Client.get_cash` and `Client.get_open_position` as those fields are all now part of `Account struct`
+
 0.4.0
----
+----
 
 - Remove `api::response`. These structs were unnecessary as each of them only held a single variable. `IronTradeClient`
   updated accordingly
