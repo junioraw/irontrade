@@ -11,9 +11,9 @@ use crate::simulated::time::Clock;
 use anyhow::Result;
 
 pub struct SimulatedEnvironment {
-    pub client: SimulatedClient,
-    pub data_source: BarDataSource,
-    pub clock: dyn Clock + Send + Sync,
+    client: SimulatedClient,
+    bar_data_source: Box<dyn BarDataSource + Send + Sync>,
+    clock: Box<dyn Clock + Send + Sync>,
 }
 
 impl Client for SimulatedEnvironment {
@@ -36,7 +36,7 @@ impl Client for SimulatedEnvironment {
 
 impl Market for SimulatedEnvironment {
     async fn get_latest_bar(&self, asset_pair: &AssetPair) -> Result<Option<Bar>> {
-        Ok(self.data_source.get_bar(asset_pair, &self.clock.now()))
+        self.bar_data_source.get_bar(asset_pair, &self.clock.now())
     }
 }
 
