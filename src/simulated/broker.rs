@@ -2,7 +2,7 @@
 
 use crate::api::common::{Amount, AssetPair, Order, OrderSide, OrderStatus, OrderType};
 use crate::api::request::OrderRequest;
-use anyhow::{Result, format_err};
+use anyhow::{anyhow, Result};
 use num_decimal::Num;
 use std::collections::{HashMap, HashSet};
 use std::str::FromStr;
@@ -68,7 +68,7 @@ impl SimulatedBroker {
         starting_balances: HashMap<String, Num>,
     ) -> Result<Self> {
         if !notional_assets.contains(currency) {
-            return Err(format_err!("Missing currency notional asset {}", currency));
+            return Err(anyhow!("Missing currency notional asset {}", currency));
         }
         Ok(Self {
             currency: currency.into(),
@@ -115,7 +115,7 @@ impl SimulatedBroker {
         let (asset, buying_power_needed) = self.get_asset_and_buying_power_needed(&order)?;
         let buying_power = self.get_buying_power(&asset);
         if buying_power < buying_power_needed {
-            return Err(format_err!("Not enough {} buying power", asset));
+            return Err(anyhow!("Not enough {} buying power", asset));
         }
         self.update_buying_power(&asset, -buying_power_needed);
         self.orders.insert(order.order_id.clone(), order);
@@ -221,7 +221,7 @@ impl SimulatedBroker {
         self.orders
             .get(order_id)
             .map(Order::clone)
-            .ok_or(format_err!("Order with id {} doesn't exist", order_id))
+            .ok_or(anyhow!("Order with id {} doesn't exist", order_id))
     }
 
     pub fn get_currency(&self) -> String {
@@ -245,7 +245,7 @@ impl SimulatedBroker {
         self.notional_per_unit
             .get(&asset_pair)
             .map(Num::clone)
-            .ok_or(format_err!(
+            .ok_or(anyhow!(
                 "{} does not have notional per unit",
                 asset_pair
             ))
@@ -274,7 +274,7 @@ impl SimulatedBroker {
 
     fn check_notional(&self, asset_pair: &AssetPair) -> Result<()> {
         if !self.notional_assets.contains(&asset_pair.notional_asset) {
-            return Err(format_err!(
+            return Err(anyhow!(
                 "{} is not a valid notional asset",
                 asset_pair.notional_asset,
             ));
@@ -578,7 +578,7 @@ mod tests {
         broker.update_balance("GBP", Num::from(12));
         broker.update_buying_power("GBP", Num::from(12));
 
-        let order_request = OrderRequest::create_limit_buy(
+        let order_request = OrderRequest::create_limit_sell(
             AssetPair::from_str("GBP/USD")?,
             Amount::Quantity {
                 quantity: Num::from(10),
@@ -692,7 +692,7 @@ mod tests {
         broker.update_balance("GBP", Num::from_str("10.5")?);
         broker.update_buying_power("GBP", Num::from_str("10.5")?);
 
-        let order_request = OrderRequest::create_limit_buy(
+        let order_request = OrderRequest::create_limit_sell(
             AssetPair::from_str("GBP/USD")?,
             Amount::Quantity {
                 quantity: Num::from(10),
