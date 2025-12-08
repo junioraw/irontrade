@@ -35,7 +35,7 @@ impl Client for SimulatedEnvironment {
 }
 
 impl Market for SimulatedEnvironment {
-    async fn get_latest_bar(&mut self, asset_pair: &AssetPair) -> Result<Option<Bar>> {
+    async fn get_latest_bar(&self, asset_pair: &AssetPair) -> Result<Option<Bar>> {
         self.bar_data_source.get_bar(asset_pair, &self.clock.now())
     }
 }

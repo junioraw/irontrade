@@ -5,7 +5,7 @@ use anyhow::Result;
 
 pub trait Market {
     fn get_latest_bar(
-        &mut self,
+        &self,
         asset_pair: &AssetPair,
     ) -> impl Future<Output = Result<Option<Bar>>> + Send;
 }
