@@ -7,15 +7,15 @@ pub trait Clock {
     fn now(&mut self) -> DateTime<Utc>;
 }
 
-pub struct SpeedClock {
+pub struct AutoClock {
     artificial_time: DateTime<Utc>,
     actual_time: DateTime<Utc>,
     time_speed_multiplier: i32,
 }
 
-impl SpeedClock {
+impl AutoClock {
     pub fn start(start_time: DateTime<Utc>, time_speed_multiplier: i32) -> Self {
-        SpeedClock {
+        AutoClock {
             artificial_time: start_time,
             actual_time: Utc::now(),
             time_speed_multiplier,
@@ -23,7 +23,7 @@ impl SpeedClock {
     }
 }
 
-impl Clock for SpeedClock {
+impl Clock for AutoClock {
     fn now(&mut self) -> DateTime<Utc> {
         let last_actual_time = Utc::now();
         let time_delta = last_actual_time - self.actual_time;
