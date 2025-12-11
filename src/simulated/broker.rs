@@ -3,25 +3,25 @@
 use crate::api::common::{Amount, AssetPair, Order, OrderSide, OrderStatus, OrderType};
 use crate::api::request::OrderRequest;
 use anyhow::{anyhow, Result};
-use num_decimal::Num;
 use std::collections::{HashMap, HashSet};
 use std::str::FromStr;
+use bigdecimal::BigDecimal;
 use uuid::Uuid;
 
 #[derive(Debug)]
 pub struct SimulatedBroker {
     currency: String,
     notional_assets: HashSet<String>,
-    buying_power_balances: HashMap<String, Num>,
+    buying_power_balances: HashMap<String, BigDecimal>,
     orders: HashMap<String, Order>,
-    notional_per_unit: HashMap<AssetPair, Num>,
-    balances: HashMap<String, Num>,
+    notional_per_unit: HashMap<AssetPair, BigDecimal>,
+    balances: HashMap<String, BigDecimal>,
 }
 
 pub struct SimulatedBrokerBuilder {
     currency: String,
     notional_assets: HashSet<String>,
-    balances: HashMap<String, Num>,
+    balances: HashMap<String, BigDecimal>,
 }
 
 impl SimulatedBrokerBuilder {
@@ -30,7 +30,7 @@ impl SimulatedBrokerBuilder {
         let mut notional_assets = HashSet::new();
         notional_assets.insert(currency.clone());
         let mut balances = HashMap::new();
-        balances.insert(currency.clone(), Num::from(0));
+        balances.insert(currency.clone(), BigDecimal::from(0));
         Self {
             currency,
             notional_assets,
@@ -38,12 +38,12 @@ impl SimulatedBrokerBuilder {
         }
     }
 
-    pub fn set_balance(&mut self, balance: Num) -> &mut Self {
+    pub fn set_balance(&mut self, balance: BigDecimal) -> &mut Self {
         self.balances.insert(self.currency.clone(), balance);
         self
     }
 
-    pub fn add_notional_asset(&mut self, notional_asset: &str, balance: Option<Num>) -> &mut Self {
+    pub fn add_notional_asset(&mut self, notional_asset: &str, balance: Option<BigDecimal>) -> &mut Self {
         self.notional_assets.insert(notional_asset.into());
         if let Some(balance) = balance {
             self.balances.insert(notional_asset.into(), balance);
@@ -65,7 +65,7 @@ impl SimulatedBroker {
     fn new(
         currency: &str,
         notional_assets: HashSet<String>,
-        starting_balances: HashMap<String, Num>,
+        starting_balances: HashMap<String, BigDecimal>,
     ) -> Result<Self> {
         if !notional_assets.contains(currency) {
             return Err(anyhow!("Missing currency notional asset {}", currency));
@@ -93,7 +93,7 @@ impl SimulatedBroker {
             asset_symbol: order_req.asset_pair.to_string(),
             amount: order_req.amount,
             limit_price: order_req.limit_price,
-            filled_quantity: Num::from(0),
+            filled_quantity: BigDecimal::from(0),
             average_fill_price: None,
             status: OrderStatus::New,
             type_,
@@ -122,14 +122,14 @@ impl SimulatedBroker {
         Ok(())
     }
 
-    fn get_asset_and_buying_power_needed(&self, order: &Order) -> Result<(String, Num)> {
+    fn get_asset_and_buying_power_needed(&self, order: &Order) -> Result<(String, BigDecimal)> {
         let asset_pair = &AssetPair::from_str(&order.asset_symbol)?;
 
         let (quantity, notional) =
             self.get_current_quantity_and_notional(&order.asset_symbol, &order.amount)?;
 
         let asset: &str;
-        let buying_power_needed: Num;
+        let buying_power_needed: BigDecimal;
 
         if order.side == OrderSide::Buy {
             asset = &asset_pair.notional_asset;
@@ -199,14 +199,14 @@ impl SimulatedBroker {
         &self,
         asset_symbol: &str,
         amount: &Amount,
-    ) -> Result<(Num, Num)> {
+    ) -> Result<(BigDecimal, BigDecimal)> {
         let asset_pair = &AssetPair::from_str(&asset_symbol)?;
         let notional_per_unit = &self.get_notional_per_unit(asset_pair)?;
-        let quantity: Num = match amount {
+        let quantity: BigDecimal = match amount {
             Amount::Quantity { quantity } => quantity.clone(),
             Amount::Notional { notional } => notional / notional_per_unit,
         };
-        let notional: Num = match amount {
+        let notional: BigDecimal = match amount {
             Amount::Quantity { quantity } => quantity * notional_per_unit,
             Amount::Notional { notional } => notional.clone(),
         };
@@ -228,23 +228,23 @@ impl SimulatedBroker {
         self.currency.clone()
     }
 
-    pub fn get_buying_power(&self, asset: &str) -> Num {
+    pub fn get_buying_power(&self, asset: &str) -> BigDecimal {
         Self::get_asset_value(&self.buying_power_balances, asset)
     }
 
-    pub fn get_balance(&self, asset: &str) -> Num {
+    pub fn get_balance(&self, asset: &str) -> BigDecimal {
         Self::get_asset_value(&self.balances, asset)
     }
 
-    fn get_asset_value(values: &HashMap<String, Num>, asset: &str) -> Num {
-        values.get(asset).map(Num::clone).unwrap_or(Num::from(0))
+    fn get_asset_value(values: &HashMap<String, BigDecimal>, asset: &str) -> BigDecimal {
+        values.get(asset).map(BigDecimal::clone).unwrap_or(BigDecimal::from(0))
     }
 
-    pub fn get_notional_per_unit(&self, asset_pair: &AssetPair) -> Result<Num> {
+    pub fn get_notional_per_unit(&self, asset_pair: &AssetPair) -> Result<BigDecimal> {
         self.check_notional(asset_pair)?;
         self.notional_per_unit
             .get(&asset_pair)
-            .map(Num::clone)
+            .map(BigDecimal::clone)
             .ok_or(anyhow!(
                 "{} does not have notional per unit",
                 asset_pair
@@ -254,7 +254,7 @@ impl SimulatedBroker {
     pub fn set_notional_per_unit(
         &mut self,
         asset_pair: AssetPair,
-        notional_per_unit: Num,
+        notional_per_unit: BigDecimal,
     ) -> Result<()> {
         self.check_notional(&asset_pair)?;
         self.notional_per_unit
@@ -282,16 +282,16 @@ impl SimulatedBroker {
         Ok(())
     }
 
-    fn update_balance(&mut self, asset: &str, delta: Num) {
+    fn update_balance(&mut self, asset: &str, delta: BigDecimal) {
         Self::update_value(&mut self.balances, asset, delta)
     }
 
-    fn update_buying_power(&mut self, asset: &str, delta: Num) {
+    fn update_buying_power(&mut self, asset: &str, delta: BigDecimal) {
         Self::update_value(&mut self.buying_power_balances, asset, delta)
     }
 
-    fn update_value(values: &mut HashMap<String, Num>, asset: &str, delta: Num) {
-        let previous_balance = values.get(asset).map(Num::clone).unwrap_or(Num::from(0));
+    fn update_value(values: &mut HashMap<String, BigDecimal>, asset: &str, delta: BigDecimal) {
+        let previous_balance = values.get(asset).map(BigDecimal::clone).unwrap_or(BigDecimal::from(0));
         values.insert(asset.into(), previous_balance + delta);
     }
 }
@@ -306,13 +306,13 @@ mod tests {
     #[test]
     fn place_order_invalid_asset_pair() -> Result<()> {
         let mut broker = SimulatedBrokerBuilder::new("USD")
-            .set_balance(Num::from_str("14.1")?)
+            .set_balance(BigDecimal::from_str("14.1")?)
             .build();
 
         let order_request = OrderRequest::create_market_buy(
             AssetPair::from_str("AAPL/USD")?,
             Amount::Quantity {
-                quantity: Num::from(10),
+                quantity: BigDecimal::from(10),
             },
         );
 
@@ -327,12 +327,12 @@ mod tests {
     fn place_order_no_balance() -> Result<()> {
         let mut broker = SimulatedBrokerBuilder::new("USD").build();
 
-        broker.set_notional_per_unit(AssetPair::from_str("GBP/USD")?, Num::from_str("1.31")?)?;
+        broker.set_notional_per_unit(AssetPair::from_str("GBP/USD")?, BigDecimal::from_str("1.31")?)?;
 
         let order_request = OrderRequest::create_market_buy(
             AssetPair::from_str("GBP/USD")?,
             Amount::Quantity {
-                quantity: Num::from(10),
+                quantity: BigDecimal::from(10),
             },
         );
 
@@ -346,14 +346,14 @@ mod tests {
     fn place_order_close_but_not_enough_balance() -> Result<()> {
         let mut broker = SimulatedBrokerBuilder::new("USD").build();
 
-        broker.set_notional_per_unit(AssetPair::from_str("GBP/USD")?, Num::from_str("1.31")?)?;
+        broker.set_notional_per_unit(AssetPair::from_str("GBP/USD")?, BigDecimal::from_str("1.31")?)?;
 
-        broker.update_balance("USD", Num::from_str("13.09")?);
+        broker.update_balance("USD", BigDecimal::from_str("13.09")?);
 
         let order_request = OrderRequest::create_market_buy(
             AssetPair::from_str("GBP/USD")?,
             Amount::Quantity {
-                quantity: Num::from(10),
+                quantity: BigDecimal::from(10),
             },
         );
 
@@ -367,25 +367,25 @@ mod tests {
     #[test]
     fn place_order_updates_balances() -> Result<()> {
         let mut broker = SimulatedBrokerBuilder::new("USD")
-            .set_balance(Num::from_str("14.1")?)
+            .set_balance(BigDecimal::from_str("14.1")?)
             .build();
 
         let _ =
-            broker.set_notional_per_unit(AssetPair::from_str("GBP/USD")?, Num::from_str("1.31")?);
+            broker.set_notional_per_unit(AssetPair::from_str("GBP/USD")?, BigDecimal::from_str("1.31")?);
 
         let order_request = OrderRequest::create_market_buy(
             AssetPair::from_str("GBP/USD")?,
             Amount::Quantity {
-                quantity: Num::from(10),
+                quantity: BigDecimal::from(10),
             },
         );
 
         broker.place_order(order_request)?;
 
-        assert_eq!(broker.get_balance("USD"), Num::from(1));
-        assert_eq!(broker.get_buying_power("USD"), Num::from(1));
-        assert_eq!(broker.get_balance("GBP"), Num::from(10));
-        assert_eq!(broker.get_buying_power("GBP"), Num::from(10));
+        assert_eq!(broker.get_balance("USD"), BigDecimal::from(1));
+        assert_eq!(broker.get_buying_power("USD"), BigDecimal::from(1));
+        assert_eq!(broker.get_balance("GBP"), BigDecimal::from(10));
+        assert_eq!(broker.get_buying_power("GBP"), BigDecimal::from(10));
 
         Ok(())
     }
@@ -393,15 +393,15 @@ mod tests {
     #[test]
     fn place_order_returns_valid_order_id() -> Result<()> {
         let mut broker = SimulatedBrokerBuilder::new("USD")
-            .set_balance(Num::from_str("14.1")?)
+            .set_balance(BigDecimal::from_str("14.1")?)
             .build();
 
-        broker.set_notional_per_unit(AssetPair::from_str("GBP/USD")?, Num::from_str("1.31")?)?;
+        broker.set_notional_per_unit(AssetPair::from_str("GBP/USD")?, BigDecimal::from_str("1.31")?)?;
 
         let order_request = OrderRequest::create_market_buy(
             AssetPair::from_str("GBP/USD")?,
             Amount::Quantity {
-                quantity: Num::from(10),
+                quantity: BigDecimal::from(10),
             },
         );
 
@@ -416,15 +416,15 @@ mod tests {
     #[test]
     fn get_market_buy_order() -> Result<()> {
         let mut broker = SimulatedBrokerBuilder::new("USD")
-            .set_balance(Num::from_str("14.1")?)
+            .set_balance(BigDecimal::from_str("14.1")?)
             .build();
 
-        broker.set_notional_per_unit(AssetPair::from_str("GBP/USD")?, Num::from_str("1.32")?)?;
+        broker.set_notional_per_unit(AssetPair::from_str("GBP/USD")?, BigDecimal::from_str("1.32")?)?;
 
         let order_request = OrderRequest::create_market_buy(
             AssetPair::from_str("GBP/USD")?,
             Amount::Quantity {
-                quantity: Num::from(10),
+                quantity: BigDecimal::from(10),
             },
         );
 
@@ -436,11 +436,11 @@ mod tests {
             order_id,
             asset_symbol: "GBP/USD".into(),
             amount: Amount::Quantity {
-                quantity: Num::from(10),
+                quantity: BigDecimal::from(10),
             },
             limit_price: None,
-            filled_quantity: Num::from(10),
-            average_fill_price: Some(Num::from_str("1.32")?),
+            filled_quantity: BigDecimal::from(10),
+            average_fill_price: Some(BigDecimal::from_str("1.32")?),
             status: OrderStatus::Filled,
             type_: OrderType::Market,
             side: OrderSide::Buy,
@@ -448,10 +448,10 @@ mod tests {
 
         assert_eq!(actual_order, expected_order);
 
-        assert_eq!(broker.get_balance("USD"), Num::from_str("0.9")?);
-        assert_eq!(broker.get_buying_power("USD"), Num::from_str("0.9")?);
-        assert_eq!(broker.get_balance("GBP"), Num::from(10));
-        assert_eq!(broker.get_buying_power("GBP"), Num::from(10));
+        assert_eq!(broker.get_balance("USD"), BigDecimal::from_str("0.9")?);
+        assert_eq!(broker.get_buying_power("USD"), BigDecimal::from_str("0.9")?);
+        assert_eq!(broker.get_balance("GBP"), BigDecimal::from(10));
+        assert_eq!(broker.get_buying_power("GBP"), BigDecimal::from(10));
 
         Ok(())
     }
@@ -460,15 +460,15 @@ mod tests {
     fn get_market_sell_order() -> Result<()> {
         let mut broker = SimulatedBrokerBuilder::new("USD").build();
 
-        broker.set_notional_per_unit(AssetPair::from_str("GBP/USD")?, Num::from_str("1.31")?)?;
+        broker.set_notional_per_unit(AssetPair::from_str("GBP/USD")?, BigDecimal::from_str("1.31")?)?;
 
-        broker.update_balance("GBP", Num::from(11));
-        broker.update_buying_power("GBP", Num::from(11));
+        broker.update_balance("GBP", BigDecimal::from(11));
+        broker.update_buying_power("GBP", BigDecimal::from(11));
 
         let order_request = OrderRequest::create_market_sell(
             AssetPair::from_str("GBP/USD")?,
             Amount::Quantity {
-                quantity: Num::from(10),
+                quantity: BigDecimal::from(10),
             },
         );
 
@@ -480,11 +480,11 @@ mod tests {
             order_id,
             asset_symbol: "GBP/USD".into(),
             amount: Amount::Quantity {
-                quantity: Num::from(10),
+                quantity: BigDecimal::from(10),
             },
             limit_price: None,
-            filled_quantity: Num::from(10),
-            average_fill_price: Some(Num::from_str("1.31")?),
+            filled_quantity: BigDecimal::from(10),
+            average_fill_price: Some(BigDecimal::from_str("1.31")?),
             status: OrderStatus::Filled,
             type_: OrderType::Market,
             side: OrderSide::Sell,
@@ -492,10 +492,10 @@ mod tests {
 
         assert_eq!(actual_order, expected_order);
 
-        assert_eq!(broker.get_balance("USD"), Num::from_str("13.1")?);
-        assert_eq!(broker.get_buying_power("USD"), Num::from_str("13.1")?);
-        assert_eq!(broker.get_balance("GBP"), Num::from(1));
-        assert_eq!(broker.get_buying_power("GBP"), Num::from(1));
+        assert_eq!(broker.get_balance("USD"), BigDecimal::from_str("13.1")?);
+        assert_eq!(broker.get_buying_power("USD"), BigDecimal::from_str("13.1")?);
+        assert_eq!(broker.get_balance("GBP"), BigDecimal::from(1));
+        assert_eq!(broker.get_buying_power("GBP"), BigDecimal::from(1));
 
         Ok(())
     }
@@ -503,17 +503,17 @@ mod tests {
     #[test]
     fn get_updated_limit_buy_order() -> Result<()> {
         let mut broker = SimulatedBrokerBuilder::new("USD")
-            .set_balance(Num::from_str("14.1")?)
+            .set_balance(BigDecimal::from_str("14.1")?)
             .build();
 
-        broker.set_notional_per_unit(AssetPair::from_str("GBP/USD")?, Num::from_str("1.31")?)?;
+        broker.set_notional_per_unit(AssetPair::from_str("GBP/USD")?, BigDecimal::from_str("1.31")?)?;
 
         let order_request = OrderRequest::create_limit_buy(
             AssetPair::from_str("GBP/USD")?,
             Amount::Quantity {
-                quantity: Num::from(10),
+                quantity: BigDecimal::from(10),
             },
-            Num::from_str("1.3")?,
+            BigDecimal::from_str("1.3")?,
         );
 
         let order_id = broker.place_order(order_request)?;
@@ -525,10 +525,10 @@ mod tests {
                 order_id: order_id.clone(),
                 asset_symbol: "GBP/USD".into(),
                 amount: Amount::Quantity {
-                    quantity: Num::from(10),
+                    quantity: BigDecimal::from(10),
                 },
-                limit_price: Some(Num::from_str("1.3")?),
-                filled_quantity: Num::from(0),
+                limit_price: Some(BigDecimal::from_str("1.3")?),
+                filled_quantity: BigDecimal::from(0),
                 average_fill_price: None,
                 status: OrderStatus::New,
                 type_: OrderType::Limit,
@@ -536,12 +536,12 @@ mod tests {
             }
         );
 
-        assert_eq!(broker.get_balance("USD"), Num::from_str("14.1")?);
-        assert_eq!(broker.get_buying_power("USD"), Num::from_str("1.1")?);
-        assert_eq!(broker.get_balance("GBP"), Num::from(0));
-        assert_eq!(broker.get_buying_power("GBP"), Num::from(0));
+        assert_eq!(broker.get_balance("USD"), BigDecimal::from_str("14.1")?);
+        assert_eq!(broker.get_buying_power("USD"), BigDecimal::from_str("1.1")?);
+        assert_eq!(broker.get_balance("GBP"), BigDecimal::from(0));
+        assert_eq!(broker.get_buying_power("GBP"), BigDecimal::from(0));
 
-        broker.set_notional_per_unit(AssetPair::from_str("GBP/USD")?, Num::from_str("1.29")?)?;
+        broker.set_notional_per_unit(AssetPair::from_str("GBP/USD")?, BigDecimal::from_str("1.29")?)?;
 
         let order = broker.get_order(&order_id)?;
         assert_eq!(
@@ -550,21 +550,21 @@ mod tests {
                 order_id,
                 asset_symbol: "GBP/USD".into(),
                 amount: Amount::Quantity {
-                    quantity: Num::from(10),
+                    quantity: BigDecimal::from(10),
                 },
-                limit_price: Some(Num::from_str("1.3")?),
-                filled_quantity: Num::from(10),
-                average_fill_price: Some(Num::from_str("1.29")?),
+                limit_price: Some(BigDecimal::from_str("1.3")?),
+                filled_quantity: BigDecimal::from(10),
+                average_fill_price: Some(BigDecimal::from_str("1.29")?),
                 status: OrderStatus::Filled,
                 type_: OrderType::Limit,
                 side: OrderSide::Buy,
             }
         );
 
-        assert_eq!(broker.get_balance("USD"), Num::from_str("1.2")?);
-        assert_eq!(broker.get_buying_power("USD"), Num::from_str("1.2")?);
-        assert_eq!(broker.get_balance("GBP"), Num::from(10));
-        assert_eq!(broker.get_buying_power("GBP"), Num::from(10));
+        assert_eq!(broker.get_balance("USD"), BigDecimal::from_str("1.2")?);
+        assert_eq!(broker.get_buying_power("USD"), BigDecimal::from_str("1.2")?);
+        assert_eq!(broker.get_balance("GBP"), BigDecimal::from(10));
+        assert_eq!(broker.get_buying_power("GBP"), BigDecimal::from(10));
 
         Ok(())
     }
@@ -573,17 +573,17 @@ mod tests {
     fn get_updated_limit_sell_order() -> Result<()> {
         let mut broker = SimulatedBrokerBuilder::new("USD").build();
 
-        broker.set_notional_per_unit(AssetPair::from_str("GBP/USD")?, Num::from_str("1.31")?)?;
+        broker.set_notional_per_unit(AssetPair::from_str("GBP/USD")?, BigDecimal::from_str("1.31")?)?;
 
-        broker.update_balance("GBP", Num::from(12));
-        broker.update_buying_power("GBP", Num::from(12));
+        broker.update_balance("GBP", BigDecimal::from(12));
+        broker.update_buying_power("GBP", BigDecimal::from(12));
 
         let order_request = OrderRequest::create_limit_sell(
             AssetPair::from_str("GBP/USD")?,
             Amount::Quantity {
-                quantity: Num::from(10),
+                quantity: BigDecimal::from(10),
             },
-            Num::from_str("1.32")?,
+            BigDecimal::from_str("1.32")?,
         );
 
         let order_id = broker.place_order(order_request)?;
@@ -595,10 +595,10 @@ mod tests {
                 order_id: order_id.clone(),
                 asset_symbol: "GBP/USD".into(),
                 amount: Amount::Quantity {
-                    quantity: Num::from(10),
+                    quantity: BigDecimal::from(10),
                 },
-                limit_price: Some(Num::from_str("1.32")?),
-                filled_quantity: Num::from(0),
+                limit_price: Some(BigDecimal::from_str("1.32")?),
+                filled_quantity: BigDecimal::from(0),
                 average_fill_price: None,
                 status: OrderStatus::New,
                 type_: OrderType::Limit,
@@ -606,12 +606,12 @@ mod tests {
             }
         );
 
-        assert_eq!(broker.get_balance("USD"), Num::from(0));
-        assert_eq!(broker.get_buying_power("USD"), Num::from(0));
-        assert_eq!(broker.get_balance("GBP"), Num::from(12));
-        assert_eq!(broker.get_buying_power("GBP"), Num::from(2));
+        assert_eq!(broker.get_balance("USD"), BigDecimal::from(0));
+        assert_eq!(broker.get_buying_power("USD"), BigDecimal::from(0));
+        assert_eq!(broker.get_balance("GBP"), BigDecimal::from(12));
+        assert_eq!(broker.get_buying_power("GBP"), BigDecimal::from(2));
 
-        broker.set_notional_per_unit(AssetPair::from_str("GBP/USD")?, Num::from_str("1.33")?)?;
+        broker.set_notional_per_unit(AssetPair::from_str("GBP/USD")?, BigDecimal::from_str("1.33")?)?;
 
         let order = broker.get_order(&order_id)?;
         assert_eq!(
@@ -620,21 +620,21 @@ mod tests {
                 order_id,
                 asset_symbol: "GBP/USD".into(),
                 amount: Amount::Quantity {
-                    quantity: Num::from(10),
+                    quantity: BigDecimal::from(10),
                 },
-                limit_price: Some(Num::from_str("1.32")?),
-                filled_quantity: Num::from(10),
-                average_fill_price: Some(Num::from_str("1.33")?),
+                limit_price: Some(BigDecimal::from_str("1.32")?),
+                filled_quantity: BigDecimal::from(10),
+                average_fill_price: Some(BigDecimal::from_str("1.33")?),
                 status: OrderStatus::Filled,
                 type_: OrderType::Limit,
                 side: OrderSide::Sell,
             }
         );
 
-        assert_eq!(broker.get_balance("USD"), Num::from_str("13.3")?);
-        assert_eq!(broker.get_buying_power("USD"), Num::from_str("13.3")?);
-        assert_eq!(broker.get_balance("GBP"), Num::from(2));
-        assert_eq!(broker.get_buying_power("GBP"), Num::from(2));
+        assert_eq!(broker.get_balance("USD"), BigDecimal::from_str("13.3")?);
+        assert_eq!(broker.get_buying_power("USD"), BigDecimal::from_str("13.3")?);
+        assert_eq!(broker.get_balance("GBP"), BigDecimal::from(2));
+        assert_eq!(broker.get_buying_power("GBP"), BigDecimal::from(2));
 
         Ok(())
     }
@@ -642,17 +642,17 @@ mod tests {
     #[test]
     fn get_filled_limit_buy_order() -> Result<()> {
         let mut broker = SimulatedBrokerBuilder::new("USD")
-            .set_balance(Num::from_str("14.1")?)
+            .set_balance(BigDecimal::from_str("14.1")?)
             .build();
 
-        broker.set_notional_per_unit(AssetPair::from_str("GBP/USD")?, Num::from_str("1.31")?)?;
+        broker.set_notional_per_unit(AssetPair::from_str("GBP/USD")?, BigDecimal::from_str("1.31")?)?;
 
         let order_request = OrderRequest::create_limit_buy(
             AssetPair::from_str("GBP/USD")?,
             Amount::Quantity {
-                quantity: Num::from(10),
+                quantity: BigDecimal::from(10),
             },
-            Num::from_str("1.4")?,
+            BigDecimal::from_str("1.4")?,
         );
 
         let order_id = broker.place_order(order_request)?;
@@ -664,21 +664,21 @@ mod tests {
                 order_id,
                 asset_symbol: "GBP/USD".into(),
                 amount: Amount::Quantity {
-                    quantity: Num::from(10),
+                    quantity: BigDecimal::from(10),
                 },
-                limit_price: Some(Num::from_str("1.4")?),
-                filled_quantity: Num::from(10),
-                average_fill_price: Some(Num::from_str("1.31")?),
+                limit_price: Some(BigDecimal::from_str("1.4")?),
+                filled_quantity: BigDecimal::from(10),
+                average_fill_price: Some(BigDecimal::from_str("1.31")?),
                 status: OrderStatus::Filled,
                 type_: OrderType::Limit,
                 side: OrderSide::Buy,
             }
         );
 
-        assert_eq!(broker.get_balance("USD"), Num::from(1));
-        assert_eq!(broker.get_buying_power("USD"), Num::from(1));
-        assert_eq!(broker.get_balance("GBP"), Num::from(10));
-        assert_eq!(broker.get_buying_power("GBP"), Num::from(10));
+        assert_eq!(broker.get_balance("USD"), BigDecimal::from(1));
+        assert_eq!(broker.get_buying_power("USD"), BigDecimal::from(1));
+        assert_eq!(broker.get_balance("GBP"), BigDecimal::from(10));
+        assert_eq!(broker.get_buying_power("GBP"), BigDecimal::from(10));
 
         Ok(())
     }
@@ -687,17 +687,17 @@ mod tests {
     fn get_filled_limit_sell_order() -> Result<()> {
         let mut broker = SimulatedBrokerBuilder::new("USD").build();
 
-        broker.set_notional_per_unit(AssetPair::from_str("GBP/USD")?, Num::from_str("1.31")?)?;
+        broker.set_notional_per_unit(AssetPair::from_str("GBP/USD")?, BigDecimal::from_str("1.31")?)?;
 
-        broker.update_balance("GBP", Num::from_str("10.5")?);
-        broker.update_buying_power("GBP", Num::from_str("10.5")?);
+        broker.update_balance("GBP", BigDecimal::from_str("10.5")?);
+        broker.update_buying_power("GBP", BigDecimal::from_str("10.5")?);
 
         let order_request = OrderRequest::create_limit_sell(
             AssetPair::from_str("GBP/USD")?,
             Amount::Quantity {
-                quantity: Num::from(10),
+                quantity: BigDecimal::from(10),
             },
-            Num::from_str("1.25")?,
+            BigDecimal::from_str("1.25")?,
         );
 
         let order_id = broker.place_order(order_request)?;
@@ -709,21 +709,21 @@ mod tests {
                 order_id,
                 asset_symbol: "GBP/USD".into(),
                 amount: Amount::Quantity {
-                    quantity: Num::from(10),
+                    quantity: BigDecimal::from(10),
                 },
-                limit_price: Some(Num::from_str("1.25")?),
-                filled_quantity: Num::from(10),
-                average_fill_price: Some(Num::from_str("1.31")?),
+                limit_price: Some(BigDecimal::from_str("1.25")?),
+                filled_quantity: BigDecimal::from(10),
+                average_fill_price: Some(BigDecimal::from_str("1.31")?),
                 status: OrderStatus::Filled,
                 type_: OrderType::Limit,
                 side: OrderSide::Sell,
             }
         );
 
-        assert_eq!(broker.get_balance("USD"), Num::from_str("13.1")?);
-        assert_eq!(broker.get_buying_power("USD"), Num::from_str("13.1")?);
-        assert_eq!(broker.get_balance("GBP"), Num::from_str("0.5")?);
-        assert_eq!(broker.get_buying_power("GBP"), Num::from_str("0.5")?);
+        assert_eq!(broker.get_balance("USD"), BigDecimal::from_str("13.1")?);
+        assert_eq!(broker.get_buying_power("USD"), BigDecimal::from_str("13.1")?);
+        assert_eq!(broker.get_balance("GBP"), BigDecimal::from_str("0.5")?);
+        assert_eq!(broker.get_buying_power("GBP"), BigDecimal::from_str("0.5")?);
 
         Ok(())
     }
@@ -731,11 +731,11 @@ mod tests {
     #[test]
     fn set_notional_per_unit_invalid_notional_asset() -> Result<()> {
         let mut broker = SimulatedBrokerBuilder::new("USD")
-            .set_balance(Num::from_str("14.1")?)
+            .set_balance(BigDecimal::from_str("14.1")?)
             .build();
 
         let err = broker
-            .set_notional_per_unit(AssetPair::from_str("GBP/USDT")?, Num::from_str("1.31")?)
+            .set_notional_per_unit(AssetPair::from_str("GBP/USDT")?, BigDecimal::from_str("1.31")?)
             .unwrap_err();
 
         assert_eq!(err.to_string(), "USDT is not a valid notional asset");
@@ -746,11 +746,11 @@ mod tests {
     #[test]
     fn set_notional_per_unit_inverted_notional_asset() -> Result<()> {
         let mut broker = SimulatedBrokerBuilder::new("USD")
-            .set_balance(Num::from_str("14.1")?)
+            .set_balance(BigDecimal::from_str("14.1")?)
             .build();
 
         let err = broker
-            .set_notional_per_unit(AssetPair::from_str("USD/GBP")?, Num::from_str("1.31")?)
+            .set_notional_per_unit(AssetPair::from_str("USD/GBP")?, BigDecimal::from_str("1.31")?)
             .unwrap_err();
 
         assert_eq!(err.to_string(), "GBP is not a valid notional asset");
@@ -769,43 +769,43 @@ mod tests {
     #[test]
     fn build_no_balance() {
         let broker = SimulatedBrokerBuilder::new("USD").build();
-        assert_eq!(broker.get_balance("USD"), Num::from(0));
-        assert_eq!(broker.get_buying_power("USD"), Num::from(0));
+        assert_eq!(broker.get_balance("USD"), BigDecimal::from(0));
+        assert_eq!(broker.get_buying_power("USD"), BigDecimal::from(0));
     }
 
     #[test]
     fn build_negative_balance() {
         let broker = SimulatedBrokerBuilder::new("USD")
-            .set_balance(Num::from(-10))
+            .set_balance(BigDecimal::from(-10))
             .build();
-        assert_eq!(broker.get_balance("USD"), Num::from(-10));
-        assert_eq!(broker.get_buying_power("USD"), Num::from(-10));
+        assert_eq!(broker.get_balance("USD"), BigDecimal::from(-10));
+        assert_eq!(broker.get_buying_power("USD"), BigDecimal::from(-10));
     }
 
     #[test]
     fn build_with_notional_assets() -> Result<()> {
         let broker = SimulatedBrokerBuilder::new("USD")
-            .set_balance(Num::from_str("14.1")?)
+            .set_balance(BigDecimal::from_str("14.1")?)
             .add_notional_asset("BTC", None)
-            .add_notional_asset("USDT", Some(Num::from(-10)))
+            .add_notional_asset("USDT", Some(BigDecimal::from(-10)))
             .build();
 
         assert_eq!(
             broker.get_balance(&broker.get_currency()),
-            Num::from_str("14.1")?
+            BigDecimal::from_str("14.1")?
         );
         assert_eq!(
             broker.get_buying_power(&broker.get_currency()),
-            Num::from_str("14.1")?
+            BigDecimal::from_str("14.1")?
         );
-        assert_eq!(broker.get_balance("USD"), Num::from_str("14.1")?);
-        assert_eq!(broker.get_buying_power("USD"), Num::from_str("14.1")?);
-        assert_eq!(broker.get_balance("USDT"), Num::from(-10));
-        assert_eq!(broker.get_buying_power("USDT"), Num::from(-10));
-        assert_eq!(broker.get_balance("BTC"), Num::from(0));
-        assert_eq!(broker.get_buying_power("BTC"), Num::from(0));
-        assert_eq!(broker.get_balance("GBP"), Num::from(0));
-        assert_eq!(broker.get_buying_power("GBP"), Num::from(0));
+        assert_eq!(broker.get_balance("USD"), BigDecimal::from_str("14.1")?);
+        assert_eq!(broker.get_buying_power("USD"), BigDecimal::from_str("14.1")?);
+        assert_eq!(broker.get_balance("USDT"), BigDecimal::from(-10));
+        assert_eq!(broker.get_buying_power("USDT"), BigDecimal::from(-10));
+        assert_eq!(broker.get_balance("BTC"), BigDecimal::from(0));
+        assert_eq!(broker.get_buying_power("BTC"), BigDecimal::from(0));
+        assert_eq!(broker.get_balance("GBP"), BigDecimal::from(0));
+        assert_eq!(broker.get_buying_power("GBP"), BigDecimal::from(0));
 
         Ok(())
     }
@@ -813,10 +813,10 @@ mod tests {
     #[test]
     fn get_purchased_asset_symbols() -> Result<()> {
         let broker = SimulatedBrokerBuilder::new("USD")
-            .set_balance(Num::from_str("15.1")?)
+            .set_balance(BigDecimal::from_str("15.1")?)
             .add_notional_asset("BTC", None)
-            .add_notional_asset("ETH", Some(Num::from(20)))
-            .add_notional_asset("USDT", Some(Num::from(-10)))
+            .add_notional_asset("ETH", Some(BigDecimal::from(20)))
+            .add_notional_asset("USDT", Some(BigDecimal::from(-10)))
             .build();
         let symbols = broker.get_purchased_asset_symbols();
         assert_eq!(symbols.len(), 2);

@@ -3,8 +3,8 @@ use crate::api::common::{Account, AssetPair, OpenPosition, Order};
 use crate::api::request::OrderRequest;
 use crate::simulated::broker::SimulatedBroker;
 use anyhow::Result;
-use num_decimal::Num;
 use std::collections::HashMap;
+use bigdecimal::BigDecimal;
 
 pub struct SimulatedClient {
     broker: SimulatedBroker,
@@ -17,7 +17,7 @@ impl SimulatedClient {
     pub fn set_notional_per_unit(
         &mut self,
         asset_pair: AssetPair,
-        notional_per_unit: Num,
+        notional_per_unit: BigDecimal,
     ) -> Result<()> {
         self.broker
             .set_notional_per_unit(asset_pair, notional_per_unit)
@@ -81,7 +81,6 @@ mod tests {
     use super::*;
     use crate::api::common::{Amount, Order, OrderSide, OrderStatus, OrderType};
     use crate::simulated::broker::SimulatedBrokerBuilder;
-    use num_decimal::Num;
     use std::str::FromStr;
 
     const TEN_DOLLARS_COIN: &str = "TEN";
@@ -94,7 +93,7 @@ mod tests {
         let order_request = OrderRequest::create_market_buy(
             ten_dollars_asset_pair(),
             Amount::Notional {
-                notional: Num::from(10),
+                notional: BigDecimal::from(10),
             },
         );
 
@@ -112,7 +111,7 @@ mod tests {
         let buy_request = OrderRequest::create_market_buy(
             ten_dollars_asset_pair(),
             Amount::Notional {
-                notional: Num::from(10),
+                notional: BigDecimal::from(10),
             },
         );
 
@@ -121,7 +120,7 @@ mod tests {
         let sell_request = OrderRequest::create_market_sell(
             ten_dollars_asset_pair(),
             Amount::Notional {
-                notional: Num::from(10),
+                notional: BigDecimal::from(10),
             },
         );
         let order_id = client.place_order(sell_request).await?;
@@ -140,7 +139,7 @@ mod tests {
         let buy_request = OrderRequest::create_market_buy(
             ten_dollars_asset_pair(),
             Amount::Notional {
-                notional: Num::from(10),
+                notional: BigDecimal::from(10),
             },
         );
 
@@ -151,7 +150,7 @@ mod tests {
         let sell_request = OrderRequest::create_market_sell(
             ten_dollars_asset_pair(),
             Amount::Notional {
-                notional: Num::from(10),
+                notional: BigDecimal::from(10),
             },
         );
 
@@ -165,11 +164,11 @@ mod tests {
             order_id: buy_order_id,
             asset_symbol: TEN_DOLLARS_COIN_PAIR.into(),
             amount: Amount::Notional {
-                notional: Num::from(10),
+                notional: BigDecimal::from(10),
             },
             limit_price: None,
-            filled_quantity: Num::from(1),
-            average_fill_price: Some(Num::from(10)),
+            filled_quantity: BigDecimal::from(1),
+            average_fill_price: Some(BigDecimal::from(10)),
             status: OrderStatus::Filled,
             type_: OrderType::Market,
             side: OrderSide::Buy,
@@ -194,28 +193,28 @@ mod tests {
     async fn get_cash_returns_current_balance() -> Result<()> {
         let mut client = create_client();
 
-        assert_eq!(client.get_account().await?.cash, Num::from(1000));
+        assert_eq!(client.get_account().await?.cash, BigDecimal::from(1000));
 
         let order_request = OrderRequest::create_market_buy(
             ten_dollars_asset_pair(),
             Amount::Notional {
-                notional: Num::from(10),
+                notional: BigDecimal::from(10),
             },
         );
 
         client.place_order(order_request).await?;
 
-        assert_eq!(client.get_account().await?.cash, Num::from(990));
+        assert_eq!(client.get_account().await?.cash, BigDecimal::from(990));
 
         let order_request = OrderRequest::create_market_sell(
             ten_dollars_asset_pair(),
             Amount::Notional {
-                notional: Num::from(5),
+                notional: BigDecimal::from(5),
             },
         );
         client.place_order(order_request).await?;
 
-        assert_eq!(client.get_account().await?.cash, Num::from(995));
+        assert_eq!(client.get_account().await?.cash, BigDecimal::from(995));
 
         Ok(())
     }
@@ -236,7 +235,7 @@ mod tests {
         let order_request = OrderRequest::create_market_buy(
             ten_dollars_asset_pair(),
             Amount::Notional {
-                notional: Num::from(15),
+                notional: BigDecimal::from(15),
             },
         );
 
@@ -247,15 +246,15 @@ mod tests {
             OpenPosition {
                 asset_symbol: TEN_DOLLARS_COIN.into(),
                 average_entry_price: None,
-                quantity: Num::from_str("1.5")?,
-                market_value: Some(Num::from(15)),
+                quantity: BigDecimal::from_str("1.5")?,
+                market_value: Some(BigDecimal::from(15)),
             }
         );
 
         let order_request = OrderRequest::create_market_sell(
             ten_dollars_asset_pair(),
             Amount::Notional {
-                notional: Num::from(10),
+                notional: BigDecimal::from(10),
             },
         );
 
@@ -266,8 +265,8 @@ mod tests {
             OpenPosition {
                 asset_symbol: TEN_DOLLARS_COIN.into(),
                 average_entry_price: None,
-                quantity: Num::from_str("0.5")?,
-                market_value: Some(Num::from(5)),
+                quantity: BigDecimal::from_str("0.5")?,
+                market_value: Some(BigDecimal::from(5)),
             }
         );
 
@@ -276,11 +275,11 @@ mod tests {
 
     fn create_client() -> impl Client {
         let broker = SimulatedBrokerBuilder::new("USD")
-            .set_balance(Num::from(1000))
+            .set_balance(BigDecimal::from(1000))
             .build();
         let mut client = SimulatedClient::new(broker);
         client
-            .set_notional_per_unit(ten_dollars_asset_pair(), Num::from(10))
+            .set_notional_per_unit(ten_dollars_asset_pair(), BigDecimal::from(10))
             .unwrap();
         client
     }
