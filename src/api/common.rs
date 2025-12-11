@@ -1,17 +1,17 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 use std::collections::HashMap;
-use num_decimal::Num;
 use std::fmt::{Display, Formatter};
 use std::str::FromStr;
 use std::string::ParseError;
+use bigdecimal::BigDecimal;
 use chrono::{DateTime, Utc};
 
 pub struct Account {
     pub open_positions: HashMap<String, OpenPosition>,
-    pub cash: Num,
+    pub cash: BigDecimal,
     pub currency: String,
-    pub buying_power: Num,
+    pub buying_power: BigDecimal,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -19,9 +19,9 @@ pub struct Order {
     pub order_id: String,
     pub asset_symbol: String,
     pub amount: Amount,
-    pub limit_price: Option<Num>,
-    pub filled_quantity: Num,
-    pub average_fill_price: Option<Num>,
+    pub limit_price: Option<BigDecimal>,
+    pub filled_quantity: BigDecimal,
+    pub average_fill_price: Option<BigDecimal>,
     pub status: OrderStatus,
     pub type_: OrderType,
     pub side: OrderSide,
@@ -30,9 +30,9 @@ pub struct Order {
 #[derive(PartialEq, Eq, Debug)]
 pub struct OpenPosition {
     pub asset_symbol: String,
-    pub average_entry_price: Option<Num>,
-    pub quantity: Num,
-    pub market_value: Option<Num>,
+    pub average_entry_price: Option<BigDecimal>,
+    pub quantity: BigDecimal,
+    pub market_value: Option<BigDecimal>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -60,9 +60,9 @@ pub enum OrderSide {
 #[derive(Hash, PartialEq, Eq, Debug, Clone)]
 pub enum Amount {
     /// Quantity, usually amount of non-notional assets.
-    Quantity { quantity: Num },
+    Quantity { quantity: BigDecimal },
     /// Notional, usually amount of a notional asset, for example a currency.
-    Notional { notional: Num },
+    Notional { notional: BigDecimal },
 }
 
 #[derive(Hash, PartialEq, Eq, Clone, Debug)]
@@ -86,10 +86,10 @@ pub struct AssetPair {
 }
 
 pub struct Bar {
-    pub low: Num,
-    pub high: Num,
-    pub open: Num,
-    pub close: Num,
+    pub low: BigDecimal,
+    pub high: BigDecimal,
+    pub open: BigDecimal,
+    pub close: BigDecimal,
     pub date_time: DateTime<Utc>,
 }
 
