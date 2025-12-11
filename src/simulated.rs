@@ -3,5 +3,5 @@
 pub mod broker;
 pub mod client;
 pub mod environment;
-mod time;
-mod data;
+pub mod time;
+pub mod data;
