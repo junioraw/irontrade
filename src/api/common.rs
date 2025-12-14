@@ -56,32 +56,15 @@ pub enum OrderSide {
     Sell,
 }
 
-/// Enum representing different value types, can either be a quantity or a notional value.
 #[derive(Hash, PartialEq, Eq, Debug, Clone)]
 pub enum Amount {
-    /// Quantity, usually amount of non-notional assets.
     Quantity { quantity: BigDecimal },
-    /// Notional, usually amount of a notional asset, for example a currency.
     Notional { notional: BigDecimal },
 }
 
 #[derive(Hash, PartialEq, Eq, Clone, Debug)]
-/// Struct defining an asset pair, usually used in buy/sell orders.
-///
-/// Can either be initialized via struct construction or from parsing a string representing an asset pair.
-///
-/// #Example
-///
-/// ```
-/// use irontrade::api::common::AssetPair;
-/// use std::str::FromStr;
-///
-/// let asset_pair = AssetPair::from_str("BTC/USD").unwrap();
-/// ```
 pub struct AssetPair {
-    /// A notional asset, like a currency or a tethered crypto coin.
     pub notional_asset: String,
-    /// A quantifiable asset, like a stock or a crypto coin.
     pub quantity_asset: String,
 }
 
