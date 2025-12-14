@@ -47,17 +47,17 @@ impl Client for SimulatedClient {
         Ok(order_id)
     }
 
-    async fn get_orders(&self) -> Result<Vec<Order>> {
+    async fn get_orders(&mut self) -> Result<Vec<Order>> {
         let orders = self.broker.get_orders();
         Ok(orders)
     }
 
-    async fn get_order(&self, order_id: &str) -> Result<Order> {
+    async fn get_order(&mut self, order_id: &str) -> Result<Order> {
         let order = self.broker.get_order(order_id)?;
         Ok(order)
     }
 
-    async fn get_account(&self) -> Result<Account> {
+    async fn get_account(&mut self) -> Result<Account> {
         let currency = &self.broker.get_currency();
         let mut open_positions = HashMap::new();
         for symbol in self.broker.get_purchased_asset_symbols() {
