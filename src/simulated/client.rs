@@ -1,5 +1,5 @@
 use crate::api::client::Client;
-use crate::api::common::{Account, AssetPair, OpenPosition, Order};
+use crate::api::common::{Account, CryptoPair, OpenPosition, Order};
 use crate::api::request::OrderRequest;
 use crate::simulated::broker::SimulatedBroker;
 use anyhow::Result;
@@ -16,7 +16,7 @@ impl SimulatedClient {
     }
     pub fn set_notional_per_unit(
         &mut self,
-        asset_pair: AssetPair,
+        asset_pair: CryptoPair,
         notional_per_unit: BigDecimal,
     ) -> Result<()> {
         self.broker
@@ -27,9 +27,9 @@ impl SimulatedClient {
 impl SimulatedClient {
     fn get_open_position(&self, asset_symbol: &str) -> Result<OpenPosition> {
         let balance = self.broker.get_balance(asset_symbol);
-        let notional_per_unit = self.broker.get_notional_per_unit(&AssetPair {
-            notional_asset: self.broker.get_currency(),
-            quantity_asset: asset_symbol.into(),
+        let notional_per_unit = self.broker.get_notional_per_unit(&CryptoPair {
+            notional_coin: self.broker.get_currency(),
+            quantity_coin: asset_symbol.into(),
         })?;
         let open_position = OpenPosition {
             asset_symbol: asset_symbol.into(),
@@ -284,7 +284,7 @@ mod tests {
         client
     }
 
-    fn ten_dollars_asset_pair() -> AssetPair {
-        AssetPair::from_str(TEN_DOLLARS_COIN_PAIR).unwrap()
+    fn ten_dollars_asset_pair() -> CryptoPair {
+        CryptoPair::from_str(TEN_DOLLARS_COIN_PAIR).unwrap()
     }
 }

@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 use crate::api::client::Client;
-use crate::api::common::{Account, AssetPair, Bar, Order};
+use crate::api::common::{Account, CryptoPair, Bar, Order};
 use crate::api::environment::Environment;
 use crate::api::market::Market;
 use crate::api::request::OrderRequest;
@@ -16,7 +16,7 @@ pub struct SimulatedEnvironment {
     client: SimulatedClient,
     bar_data_source: Box<dyn BarDataSource + Send + Sync>,
     last_processed_time: Option<DateTime<Utc>>,
-    assets_to_trade: HashSet<AssetPair>,
+    assets_to_trade: HashSet<CryptoPair>,
     clock: Box<dyn Clock + Send + Sync>,
 }
 
@@ -74,7 +74,7 @@ impl Client for SimulatedEnvironment {
 }
 
 impl Market for SimulatedEnvironment {
-    async fn get_latest_bar(&self, asset_pair: &AssetPair) -> Result<Option<Bar>> {
+    async fn get_latest_bar(&self, asset_pair: &CryptoPair) -> Result<Option<Bar>> {
         self.bar_data_source.get_bar(asset_pair, &self.clock.now())
     }
 }
