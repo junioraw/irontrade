@@ -29,6 +29,9 @@ impl SimulatedEnvironment {
     }
 
     fn update(&mut self) -> Result<()> {
+        if self.last_processed_time.is_none() {
+            return Err(anyhow!("Environment has not been initialized"));
+        }
         let now = self.clock.now();
         let period = Duration::seconds(30);
         let mut last_processed_time = self.last_processed_time.unwrap_or(now);
