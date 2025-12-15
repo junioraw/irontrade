@@ -1,14 +1,14 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 use crate::api::client::Client;
-use crate::api::common::{Account, CryptoPair, Bar, Order};
+use crate::api::common::{Account, Bar, CryptoPair, Order};
 use crate::api::environment::Environment;
 use crate::api::market::Market;
 use crate::api::request::OrderRequest;
 use crate::simulated::client::SimulatedClient;
 use crate::simulated::data::BarDataSource;
 use crate::simulated::time::Clock;
-use anyhow::{anyhow, Result};
+use anyhow::{Result, anyhow};
 use chrono::{DateTime, Duration, Utc};
 use std::collections::HashSet;
 
@@ -21,6 +21,24 @@ pub struct SimulatedEnvironment {
 }
 
 impl SimulatedEnvironment {
+    pub fn new<B, C>(
+        client: SimulatedClient,
+        assets_to_trade: HashSet<CryptoPair>,
+        bar_data_source: B,
+        clock: C,
+    ) -> Self
+    where
+        B: BarDataSource + Send + Sync + 'static,
+        C: Clock + Send + Sync + 'static,
+    {
+        SimulatedEnvironment {
+            client,
+            bar_data_source: Box::new(bar_data_source),
+            last_processed_time: None,
+            assets_to_trade,
+            clock: Box::new(clock),
+        }
+    }
     pub fn init(&mut self) -> Result<()> {
         if self.last_processed_time.is_some() {
             return Err(anyhow!("Environment has already been initialized"));
