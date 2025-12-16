@@ -8,7 +8,7 @@ use crate::api::request::OrderRequest;
 use crate::simulated::client::SimulatedClient;
 use crate::simulated::data::BarDataSource;
 use crate::simulated::time::Clock;
-use anyhow::{Result, anyhow};
+use anyhow::{anyhow, Result};
 use chrono::{DateTime, Duration, Utc};
 use std::collections::HashSet;
 
@@ -43,6 +43,7 @@ impl SimulatedEnvironment {
         if self.last_processed_time.is_some() {
             return Err(anyhow!("Environment has already been initialized"));
         }
+        self.last_processed_time = Some(self.clock.now());
         self.update()
     }
 
@@ -101,3 +102,56 @@ impl Market for SimulatedEnvironment {
 }
 
 impl Environment for SimulatedEnvironment {}
+
+#[cfg(test)]
+mod tests {
+    use crate::api::common::{Bar, CryptoPair};
+    use crate::simulated::broker::SimulatedBrokerBuilder;
+    use crate::simulated::client::SimulatedClient;
+    use crate::simulated::data::BarDataSource;
+    use crate::simulated::environment::SimulatedEnvironment;
+    use crate::simulated::time::Clock;
+    use anyhow::Result;
+    use chrono::{DateTime, NaiveDate, NaiveDateTime, NaiveTime, Utc};
+    use std::collections::HashSet;
+
+    #[test]
+    fn init_twice() -> Result<()> {
+        let mut environment = create_environment();
+        environment.init()?;
+        let err = environment.init().unwrap_err();
+        assert_eq!(err.to_string(), "Environment has already been initialized");
+        Ok(())
+    }
+
+    fn create_environment() -> SimulatedEnvironment {
+        struct TestDataSource;
+        impl BarDataSource for TestDataSource {
+            fn get_bar(
+                &self,
+                _asset_pair: &CryptoPair,
+                _date_time: &DateTime<Utc>,
+            ) -> anyhow::Result<Option<Bar>> {
+                unimplemented!("Test method")
+            }
+        }
+        struct TestClock;
+        impl Clock for TestClock {
+            fn now(&self) -> DateTime<Utc> {
+                DateTime::from_naive_utc_and_offset(
+                    NaiveDateTime::new(
+                        NaiveDate::from_ymd_opt(2025, 12, 06).unwrap(),
+                        NaiveTime::from_hms_opt(18, 30, 00).unwrap(),
+                    ),
+                    Utc,
+                )
+            }
+        }
+        SimulatedEnvironment::new(
+            SimulatedClient::new(SimulatedBrokerBuilder::new("GBP").build()),
+            HashSet::new(),
+            TestDataSource,
+            TestClock,
+        )
+    }
+}
