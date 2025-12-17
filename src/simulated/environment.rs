@@ -39,6 +39,7 @@ impl SimulatedEnvironment {
             clock: Box::new(clock),
         }
     }
+
     pub fn init(&mut self) -> Result<()> {
         if self.last_processed_time.is_some() {
             return Err(anyhow!("Environment has already been initialized"));
@@ -105,22 +106,63 @@ impl Environment for SimulatedEnvironment {}
 
 #[cfg(test)]
 mod tests {
-    use crate::api::common::{Bar, CryptoPair};
+    use crate::api::client::Client;
+    use crate::api::common::{Amount, Bar, CryptoPair};
+    use crate::api::request::OrderRequest;
     use crate::simulated::broker::SimulatedBrokerBuilder;
     use crate::simulated::client::SimulatedClient;
     use crate::simulated::data::BarDataSource;
     use crate::simulated::environment::SimulatedEnvironment;
     use crate::simulated::time::Clock;
     use anyhow::Result;
+    use bigdecimal::BigDecimal;
     use chrono::{DateTime, NaiveDate, NaiveDateTime, NaiveTime, Utc};
     use std::collections::HashSet;
 
     #[test]
     fn init_twice() -> Result<()> {
-        let mut environment = create_environment();
-        environment.init()?;
-        let err = environment.init().unwrap_err();
+        let mut env = create_environment();
+        env.init()?;
+        let err = env.init().unwrap_err();
         assert_eq!(err.to_string(), "Environment has already been initialized");
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn place_order_without_init() -> Result<()> {
+        let mut env = create_environment();
+        let err = env.place_order(OrderRequest::create_market_buy(
+            CryptoPair {
+                notional_coin: "GBP".into(),
+                quantity_coin: "USDT".into(),
+            },
+            Amount::Quantity { quantity: BigDecimal::from(10) }
+        )).await.unwrap_err();
+        assert_eq!(err.to_string(), "Environment has not been initialized");
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn get_orders_without_init() -> Result<()> {
+        let mut env = create_environment();
+        let err = env.get_orders().await.unwrap_err();
+        assert_eq!(err.to_string(), "Environment has not been initialized");
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn get_order_without_init() -> Result<()> {
+        let mut env = create_environment();
+        let err = env.get_order("123").await.unwrap_err();
+        assert_eq!(err.to_string(), "Environment has not been initialized");
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn get_account_without_init() -> Result<()> {
+        let mut env = create_environment();
+        let err = env.get_account().await.unwrap_err();
+        assert_eq!(err.to_string(), "Environment has not been initialized");
         Ok(())
     }
 
@@ -131,7 +173,7 @@ mod tests {
                 &self,
                 _asset_pair: &CryptoPair,
                 _date_time: &DateTime<Utc>,
-            ) -> anyhow::Result<Option<Bar>> {
+            ) -> Result<Option<Bar>> {
                 unimplemented!("Test method")
             }
         }

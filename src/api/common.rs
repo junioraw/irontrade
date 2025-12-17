@@ -7,6 +7,7 @@ use std::string::ParseError;
 use bigdecimal::BigDecimal;
 use chrono::{DateTime, Utc};
 
+#[derive(Debug)]
 pub struct Account {
     pub open_positions: HashMap<String, OpenPosition>,
     pub cash: BigDecimal,
@@ -68,6 +69,7 @@ pub struct CryptoPair {
     pub quantity_coin: String,
 }
 
+#[derive(Debug)]
 pub struct Bar {
     pub low: BigDecimal,
     pub high: BigDecimal,
