@@ -116,8 +116,9 @@ mod tests {
     use crate::simulated::time::Clock;
     use anyhow::Result;
     use bigdecimal::BigDecimal;
-    use chrono::{DateTime, NaiveDate, NaiveDateTime, NaiveTime, Utc};
+    use chrono::{DateTime, Utc};
     use std::collections::HashSet;
+    use std::str::FromStr;
 
     #[test]
     fn init_twice() -> Result<()> {
@@ -132,10 +133,7 @@ mod tests {
     async fn place_order_without_init() -> Result<()> {
         let mut env = create_environment();
         let err = env.place_order(OrderRequest::create_market_buy(
-            CryptoPair {
-                notional_coin: "GBP".into(),
-                quantity_coin: "USDT".into(),
-            },
+            "USDT/GBP".parse()?,
             Amount::Quantity { quantity: BigDecimal::from(10) }
         )).await.unwrap_err();
         assert_eq!(err.to_string(), "Environment has not been initialized");
@@ -180,13 +178,7 @@ mod tests {
         struct TestClock;
         impl Clock for TestClock {
             fn now(&self) -> DateTime<Utc> {
-                DateTime::from_naive_utc_and_offset(
-                    NaiveDateTime::new(
-                        NaiveDate::from_ymd_opt(2025, 12, 06).unwrap(),
-                        NaiveTime::from_hms_opt(18, 30, 00).unwrap(),
-                    ),
-                    Utc,
-                )
+                DateTime::<Utc>::from_str("2025-12-17T18:30:00+00:00").unwrap()
             }
         }
         SimulatedEnvironment::new(
