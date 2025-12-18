@@ -18,6 +18,7 @@ pub struct SimulatedEnvironment {
     last_processed_time: Option<DateTime<Utc>>,
     assets_to_trade: HashSet<CryptoPair>,
     clock: Box<dyn Clock + Send + Sync>,
+    refresh_duration: Duration
 }
 
 impl SimulatedEnvironment {
@@ -26,6 +27,7 @@ impl SimulatedEnvironment {
         assets_to_trade: HashSet<CryptoPair>,
         bar_data_source: B,
         clock: C,
+        refresh_duration: Duration
     ) -> Self
     where
         B: BarDataSource + Send + Sync + 'static,
@@ -37,6 +39,7 @@ impl SimulatedEnvironment {
             last_processed_time: None,
             assets_to_trade,
             clock: Box::new(clock),
+            refresh_duration
         }
     }
 
@@ -53,7 +56,6 @@ impl SimulatedEnvironment {
             return Err(anyhow!("Environment has not been initialized"));
         }
         let now = self.clock.now();
-        let period = Duration::seconds(30);
         let mut last_processed_time = self.last_processed_time.unwrap_or(now);
         while last_processed_time <= now {
             let assets_to_trade = self.assets_to_trade.clone();
@@ -67,7 +69,7 @@ impl SimulatedEnvironment {
             if last_processed_time == now {
                 break;
             }
-            last_processed_time = DateTime::min(last_processed_time + period, now);
+            last_processed_time = DateTime::min(last_processed_time + self.refresh_duration, now);
         }
         self.last_processed_time = Some(now);
         Ok(())
@@ -116,7 +118,7 @@ mod tests {
     use crate::simulated::time::Clock;
     use anyhow::Result;
     use bigdecimal::BigDecimal;
-    use chrono::{DateTime, Utc};
+    use chrono::{DateTime, Duration, Utc};
     use std::collections::HashSet;
     use std::str::FromStr;
 
@@ -186,6 +188,7 @@ mod tests {
             HashSet::new(),
             TestDataSource,
             TestClock,
+            Duration::seconds(1)
         )
     }
 }
