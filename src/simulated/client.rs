@@ -16,11 +16,11 @@ impl SimulatedClient {
     }
     pub fn set_notional_per_unit(
         &mut self,
-        asset_pair: CryptoPair,
-        notional_per_unit: BigDecimal,
+        crypto_pair: CryptoPair,
+        notional_value_per_unit: BigDecimal,
     ) -> Result<()> {
         self.broker
-            .set_notional_per_unit(asset_pair, notional_per_unit)
+            .set_notional_value_per_unit(crypto_pair, notional_value_per_unit)
     }
 }
 
@@ -91,7 +91,7 @@ mod tests {
         let mut client = create_client();
 
         let order_request = OrderRequest::create_market_buy(
-            ten_dollars_asset_pair(),
+            ten_dollars_crypto_pair(),
             Amount::Notional {
                 notional: BigDecimal::from(10),
             },
@@ -109,7 +109,7 @@ mod tests {
         let mut client = create_client();
 
         let buy_request = OrderRequest::create_market_buy(
-            ten_dollars_asset_pair(),
+            ten_dollars_crypto_pair(),
             Amount::Notional {
                 notional: BigDecimal::from(10),
             },
@@ -118,7 +118,7 @@ mod tests {
         client.place_order(buy_request).await?;
 
         let sell_request = OrderRequest::create_market_sell(
-            ten_dollars_asset_pair(),
+            ten_dollars_crypto_pair(),
             Amount::Notional {
                 notional: BigDecimal::from(10),
             },
@@ -137,7 +137,7 @@ mod tests {
         assert_eq!(client.get_orders().await?.len(), 0);
 
         let buy_request = OrderRequest::create_market_buy(
-            ten_dollars_asset_pair(),
+            ten_dollars_crypto_pair(),
             Amount::Notional {
                 notional: BigDecimal::from(10),
             },
@@ -148,7 +148,7 @@ mod tests {
         assert_eq!(client.get_orders().await?.len(), 1);
 
         let sell_request = OrderRequest::create_market_sell(
-            ten_dollars_asset_pair(),
+            ten_dollars_crypto_pair(),
             Amount::Notional {
                 notional: BigDecimal::from(10),
             },
@@ -196,7 +196,7 @@ mod tests {
         assert_eq!(client.get_account().await?.cash, BigDecimal::from(1000));
 
         let order_request = OrderRequest::create_market_buy(
-            ten_dollars_asset_pair(),
+            ten_dollars_crypto_pair(),
             Amount::Notional {
                 notional: BigDecimal::from(10),
             },
@@ -207,7 +207,7 @@ mod tests {
         assert_eq!(client.get_account().await?.cash, BigDecimal::from(990));
 
         let order_request = OrderRequest::create_market_sell(
-            ten_dollars_asset_pair(),
+            ten_dollars_crypto_pair(),
             Amount::Notional {
                 notional: BigDecimal::from(5),
             },
@@ -233,7 +233,7 @@ mod tests {
         );
 
         let order_request = OrderRequest::create_market_buy(
-            ten_dollars_asset_pair(),
+            ten_dollars_crypto_pair(),
             Amount::Notional {
                 notional: BigDecimal::from(15),
             },
@@ -252,7 +252,7 @@ mod tests {
         );
 
         let order_request = OrderRequest::create_market_sell(
-            ten_dollars_asset_pair(),
+            ten_dollars_crypto_pair(),
             Amount::Notional {
                 notional: BigDecimal::from(10),
             },
@@ -279,12 +279,12 @@ mod tests {
             .build();
         let mut client = SimulatedClient::new(broker);
         client
-            .set_notional_per_unit(ten_dollars_asset_pair(), BigDecimal::from(10))
+            .set_notional_per_unit(ten_dollars_crypto_pair(), BigDecimal::from(10))
             .unwrap();
         client
     }
 
-    fn ten_dollars_asset_pair() -> CryptoPair {
+    fn ten_dollars_crypto_pair() -> CryptoPair {
         CryptoPair::from_str(TEN_DOLLARS_COIN_PAIR).unwrap()
     }
 }
