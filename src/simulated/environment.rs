@@ -8,7 +8,7 @@ use crate::api::request::OrderRequest;
 use crate::simulated::client::SimulatedClient;
 use crate::simulated::data::BarDataSource;
 use crate::simulated::time::Clock;
-use anyhow::{anyhow, Result};
+use anyhow::{Result, anyhow};
 use chrono::{DateTime, Duration, Utc};
 use std::collections::HashSet;
 
@@ -18,7 +18,8 @@ pub struct SimulatedEnvironment {
     last_processed_time: Option<DateTime<Utc>>,
     crypto_pairs_to_trade: HashSet<CryptoPair>,
     clock: Box<dyn Clock + Send + Sync>,
-    refresh_duration: Duration
+    bar_duration: Duration,
+    refresh_duration: Duration,
 }
 
 impl SimulatedEnvironment {
@@ -27,7 +28,8 @@ impl SimulatedEnvironment {
         crypto_pairs_to_trade: HashSet<CryptoPair>,
         bar_data_source: B,
         clock: C,
-        refresh_duration: Duration
+        bar_duration: Duration,
+        refresh_duration: Duration,
     ) -> Self
     where
         B: BarDataSource + Send + Sync + 'static,
@@ -39,7 +41,8 @@ impl SimulatedEnvironment {
             last_processed_time: None,
             crypto_pairs_to_trade,
             clock: Box::new(clock),
-            refresh_duration
+            bar_duration,
+            refresh_duration,
         }
     }
 
@@ -59,7 +62,9 @@ impl SimulatedEnvironment {
         let mut last_processed_time = self.last_processed_time.unwrap_or(now);
         while last_processed_time <= now {
             for crypto_pair in self.crypto_pairs_to_trade.clone() {
-                let bar = self.bar_data_source.get_bar(&crypto_pair, &now)?;
+                let bar = self
+                    .bar_data_source
+                    .get_bar(&crypto_pair, &now, self.bar_duration)?;
                 if let Some(bar) = bar {
                     let value = (bar.low + bar.high) / 2.0;
                     self.client.set_notional_per_unit(crypto_pair, value)?;
@@ -98,8 +103,24 @@ impl Client for SimulatedEnvironment {
 }
 
 impl Market for SimulatedEnvironment {
-    async fn get_latest_bar(&self, crypto_pair: &CryptoPair) -> Result<Option<Bar>> {
-        self.bar_data_source.get_bar(crypto_pair, &self.clock.now())
+    async fn get_latest_bar(
+        &self,
+        crypto_pair: &CryptoPair,
+        bar_duration: Duration,
+    ) -> Result<Option<Bar>> {
+        let now = self.clock.now();
+        let bar = self
+            .bar_data_source
+            .get_bar(crypto_pair, &now, bar_duration)?;
+        if bar.is_none() {
+            return Ok(None);
+        }
+        let bar = bar.unwrap();
+        if bar.date_time + bar_duration > now {
+            // In a real environment bars would only be returned for the past
+            return Ok(None);
+        }
+        Ok(Some(bar))
     }
 }
 
@@ -133,10 +154,15 @@ mod tests {
     #[tokio::test]
     async fn place_order_without_init() -> Result<()> {
         let mut env = create_environment();
-        let err = env.place_order(OrderRequest::create_market_buy(
-            "USDT/GBP".parse()?,
-            Amount::Quantity { quantity: BigDecimal::from(10) }
-        )).await.unwrap_err();
+        let err = env
+            .place_order(OrderRequest::create_market_buy(
+                "USDT/GBP".parse()?,
+                Amount::Quantity {
+                    quantity: BigDecimal::from(10),
+                },
+            ))
+            .await
+            .unwrap_err();
         assert_eq!(err.to_string(), "Environment has not been initialized");
         Ok(())
     }
@@ -172,6 +198,7 @@ mod tests {
                 &self,
                 _crypto_pair: &CryptoPair,
                 _date_time: &DateTime<Utc>,
+                _bar_duration: Duration,
             ) -> Result<Option<Bar>> {
                 unimplemented!("Test method")
             }
@@ -187,7 +214,8 @@ mod tests {
             HashSet::new(),
             TestDataSource,
             TestClock,
-            Duration::seconds(1)
+            Duration::minutes(1),
+            Duration::seconds(1),
         )
     }
 }
