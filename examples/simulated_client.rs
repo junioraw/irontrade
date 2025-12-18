@@ -1,3 +1,4 @@
+// Copyright (C) 2025 Agostinho Junior
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 use anyhow::Result;
