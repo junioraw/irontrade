@@ -47,8 +47,6 @@ println!("GBP balance: {}", account.cash);
 
 // AVAX quantity will be smaller than 10 since the broker was built with a 0.25% fee
 println!("AVAX quantity: {}", account.open_positions["AVAX"].quantity);
-
-Ok(())
 ```
 
 [docs-rs]: https://docs.rs/irontrade/latest/irontrade/
