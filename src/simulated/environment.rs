@@ -144,7 +144,7 @@ mod tests {
 
     #[test]
     fn init_twice() -> Result<()> {
-        let mut env = create_environment();
+        let mut env = create_environment(TestDataSource, TestClock);
         env.init()?;
         let err = env.init().unwrap_err();
         assert_eq!(err.to_string(), "Environment has already been initialized");
@@ -153,7 +153,7 @@ mod tests {
 
     #[tokio::test]
     async fn place_order_without_init() -> Result<()> {
-        let mut env = create_environment();
+        let mut env = create_environment(TestDataSource, TestClock);
         let err = env
             .place_order(OrderRequest::create_market_buy(
                 "USDT/GBP".parse()?,
@@ -169,7 +169,7 @@ mod tests {
 
     #[tokio::test]
     async fn get_orders_without_init() -> Result<()> {
-        let mut env = create_environment();
+        let mut env = create_environment(TestDataSource, TestClock);
         let err = env.get_orders().await.unwrap_err();
         assert_eq!(err.to_string(), "Environment has not been initialized");
         Ok(())
@@ -177,7 +177,7 @@ mod tests {
 
     #[tokio::test]
     async fn get_order_without_init() -> Result<()> {
-        let mut env = create_environment();
+        let mut env = create_environment(TestDataSource, TestClock);
         let err = env.get_order("123").await.unwrap_err();
         assert_eq!(err.to_string(), "Environment has not been initialized");
         Ok(())
@@ -185,37 +185,42 @@ mod tests {
 
     #[tokio::test]
     async fn get_account_without_init() -> Result<()> {
-        let mut env = create_environment();
+        let mut env = create_environment(TestDataSource, TestClock);
         let err = env.get_account().await.unwrap_err();
         assert_eq!(err.to_string(), "Environment has not been initialized");
         Ok(())
     }
 
-    fn create_environment() -> SimulatedEnvironment {
-        struct TestDataSource;
-        impl BarDataSource for TestDataSource {
-            fn get_bar(
-                &self,
-                _crypto_pair: &CryptoPair,
-                _date_time: &DateTime<Utc>,
-                _bar_duration: Duration,
-            ) -> Result<Option<Bar>> {
-                unimplemented!("Test method")
-            }
-        }
-        struct TestClock;
-        impl Clock for TestClock {
-            fn now(&self) -> DateTime<Utc> {
-                DateTime::<Utc>::from_str("2025-12-17T18:30:00+00:00").unwrap()
-            }
-        }
+    fn create_environment<B, C>(data_source: B, clock: C) -> SimulatedEnvironment
+    where
+        B: BarDataSource + Send + Sync + 'static,
+        C: Clock + Send + Sync + 'static,
+    {
         SimulatedEnvironment::new(
             SimulatedClient::new(SimulatedBrokerBuilder::new("GBP").build()),
             HashSet::new(),
-            TestDataSource,
-            TestClock,
+            data_source,
+            clock,
             Duration::minutes(1),
             Duration::seconds(1),
         )
+    }
+
+    struct TestDataSource;
+    impl BarDataSource for TestDataSource {
+        fn get_bar(
+            &self,
+            _crypto_pair: &CryptoPair,
+            _date_time: &DateTime<Utc>,
+            _bar_duration: Duration,
+        ) -> Result<Option<Bar>> {
+            unimplemented!("Test method")
+        }
+    }
+    struct TestClock;
+    impl Clock for TestClock {
+        fn now(&self) -> DateTime<Utc> {
+            DateTime::<Utc>::from_str("2025-12-17T18:30:00+00:00").unwrap()
+        }
     }
 }
