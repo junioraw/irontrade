@@ -9,7 +9,7 @@ irontrade
 Usage
 ----
 
-The following examples shows the usage of a `SimulatedClient`.
+The following examples shows how to create and use a `SimulatedClient`:
 
 ```rust
 // Create a broker with a balance of 100 GBP and a fee of 0.25% per transaction
