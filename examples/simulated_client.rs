@@ -44,7 +44,7 @@ async fn main() -> Result<()> {
     let account = client.get_account().await?;
     println!("GBP balance: {}", account.cash);
 
-    // AVAX quantity will be smaller than 10, since the broker was built with a 0.25% fee
+    // AVAX quantity will be smaller than 10 since the broker was built with a 0.25% fee
     println!("AVAX quantity: {}", account.open_positions["AVAX"].quantity);
 
     Ok(())
