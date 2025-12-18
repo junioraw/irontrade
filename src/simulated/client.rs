@@ -3,8 +3,8 @@ use crate::api::common::{Account, CryptoPair, OpenPosition, Order};
 use crate::api::request::OrderRequest;
 use crate::simulated::broker::SimulatedBroker;
 use anyhow::Result;
-use std::collections::HashMap;
 use bigdecimal::BigDecimal;
+use std::collections::HashMap;
 
 pub struct SimulatedClient {
     broker: SimulatedBroker,
@@ -84,14 +84,14 @@ mod tests {
     use std::str::FromStr;
 
     const TEN_DOLLARS_COIN: &str = "TEN";
-    const TEN_DOLLARS_COIN_PAIR: &str = "TEN/USD";
+    const TEN_DOLLARS_CRYPTO_PAIR: &str = "TEN/USD";
 
     #[tokio::test]
     async fn buy_market_returns_order_id() -> Result<()> {
-        let mut client = create_client();
+        let mut client = create_client()?;
 
         let order_request = OrderRequest::create_market_buy(
-            ten_dollars_crypto_pair(),
+            CryptoPair::from_str(TEN_DOLLARS_CRYPTO_PAIR)?,
             Amount::Notional {
                 notional: BigDecimal::from(10),
             },
@@ -106,10 +106,10 @@ mod tests {
 
     #[tokio::test]
     async fn sell_market_returns_order_id() -> Result<()> {
-        let mut client = create_client();
+        let mut client = create_client()?;
 
         let buy_request = OrderRequest::create_market_buy(
-            ten_dollars_crypto_pair(),
+            CryptoPair::from_str(TEN_DOLLARS_CRYPTO_PAIR)?,
             Amount::Notional {
                 notional: BigDecimal::from(10),
             },
@@ -118,7 +118,7 @@ mod tests {
         client.place_order(buy_request).await?;
 
         let sell_request = OrderRequest::create_market_sell(
-            ten_dollars_crypto_pair(),
+            CryptoPair::from_str(TEN_DOLLARS_CRYPTO_PAIR)?,
             Amount::Notional {
                 notional: BigDecimal::from(10),
             },
@@ -132,12 +132,12 @@ mod tests {
 
     #[tokio::test]
     async fn get_orders_returns_all_placed_orders() -> Result<()> {
-        let mut client = create_client();
+        let mut client = create_client()?;
 
         assert_eq!(client.get_orders().await?.len(), 0);
 
         let buy_request = OrderRequest::create_market_buy(
-            ten_dollars_crypto_pair(),
+            CryptoPair::from_str(TEN_DOLLARS_CRYPTO_PAIR)?,
             Amount::Notional {
                 notional: BigDecimal::from(10),
             },
@@ -148,7 +148,7 @@ mod tests {
         assert_eq!(client.get_orders().await?.len(), 1);
 
         let sell_request = OrderRequest::create_market_sell(
-            ten_dollars_crypto_pair(),
+            CryptoPair::from_str(TEN_DOLLARS_CRYPTO_PAIR)?,
             Amount::Notional {
                 notional: BigDecimal::from(10),
             },
@@ -162,7 +162,7 @@ mod tests {
 
         let expected_order = Order {
             order_id: buy_order_id,
-            asset_symbol: TEN_DOLLARS_COIN_PAIR.into(),
+            asset_symbol: TEN_DOLLARS_CRYPTO_PAIR.into(),
             amount: Amount::Notional {
                 notional: BigDecimal::from(10),
             },
@@ -191,12 +191,12 @@ mod tests {
 
     #[tokio::test]
     async fn get_cash_returns_current_balance() -> Result<()> {
-        let mut client = create_client();
+        let mut client = create_client()?;
 
         assert_eq!(client.get_account().await?.cash, BigDecimal::from(1000));
 
         let order_request = OrderRequest::create_market_buy(
-            ten_dollars_crypto_pair(),
+            CryptoPair::from_str(TEN_DOLLARS_CRYPTO_PAIR)?,
             Amount::Notional {
                 notional: BigDecimal::from(10),
             },
@@ -207,7 +207,7 @@ mod tests {
         assert_eq!(client.get_account().await?.cash, BigDecimal::from(990));
 
         let order_request = OrderRequest::create_market_sell(
-            ten_dollars_crypto_pair(),
+            CryptoPair::from_str(TEN_DOLLARS_CRYPTO_PAIR)?,
             Amount::Notional {
                 notional: BigDecimal::from(5),
             },
@@ -221,7 +221,7 @@ mod tests {
 
     #[tokio::test]
     async fn get_open_position() -> Result<()> {
-        let mut client = create_client();
+        let mut client = create_client()?;
 
         assert_eq!(
             client
@@ -233,7 +233,7 @@ mod tests {
         );
 
         let order_request = OrderRequest::create_market_buy(
-            ten_dollars_crypto_pair(),
+            CryptoPair::from_str(TEN_DOLLARS_CRYPTO_PAIR)?,
             Amount::Notional {
                 notional: BigDecimal::from(15),
             },
@@ -252,7 +252,7 @@ mod tests {
         );
 
         let order_request = OrderRequest::create_market_sell(
-            ten_dollars_crypto_pair(),
+            CryptoPair::from_str(TEN_DOLLARS_CRYPTO_PAIR)?,
             Amount::Notional {
                 notional: BigDecimal::from(10),
             },
@@ -273,18 +273,15 @@ mod tests {
         Ok(())
     }
 
-    fn create_client() -> impl Client {
+    fn create_client() -> Result<impl Client> {
         let broker = SimulatedBrokerBuilder::new("USD")
             .set_balance(BigDecimal::from(1000))
             .build();
         let mut client = SimulatedClient::new(broker);
-        client
-            .set_notional_per_unit(ten_dollars_crypto_pair(), BigDecimal::from(10))
-            .unwrap();
-        client
-    }
-
-    fn ten_dollars_crypto_pair() -> CryptoPair {
-        CryptoPair::from_str(TEN_DOLLARS_COIN_PAIR).unwrap()
+        client.set_notional_per_unit(
+            CryptoPair::from_str(TEN_DOLLARS_CRYPTO_PAIR)?,
+            BigDecimal::from(10),
+        )?;
+        Ok(client)
     }
 }
