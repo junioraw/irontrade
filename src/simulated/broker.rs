@@ -361,7 +361,7 @@ mod tests {
             .set_balance(BigDecimal::from_str("14.1")?)
             .build();
 
-        let order_request = OrderRequest::create_market_buy(
+        let order_request = OrderRequest::market_buy(
             CryptoPair::from_str("AAPL/USD")?,
             Amount::Quantity {
                 quantity: BigDecimal::from(10),
@@ -384,7 +384,7 @@ mod tests {
             BigDecimal::from_str("1.31")?,
         )?;
 
-        let order_request = OrderRequest::create_market_buy(
+        let order_request = OrderRequest::market_buy(
             CryptoPair::from_str("GBP/USD")?,
             Amount::Quantity {
                 quantity: BigDecimal::from(10),
@@ -408,7 +408,7 @@ mod tests {
 
         broker.update_balance("USD", BigDecimal::from_str("13.09")?);
 
-        let order_request = OrderRequest::create_market_buy(
+        let order_request = OrderRequest::market_buy(
             CryptoPair::from_str("GBP/USD")?,
             Amount::Quantity {
                 quantity: BigDecimal::from(10),
@@ -433,7 +433,7 @@ mod tests {
             BigDecimal::from_str("1.31")?,
         );
 
-        let order_request = OrderRequest::create_market_buy(
+        let order_request = OrderRequest::market_buy(
             CryptoPair::from_str("GBP/USD")?,
             Amount::Quantity {
                 quantity: BigDecimal::from(10),
@@ -462,7 +462,7 @@ mod tests {
             BigDecimal::from_str("1.31")?,
         );
 
-        let order_request = OrderRequest::create_market_buy(
+        let order_request = OrderRequest::market_buy(
             CryptoPair::from_str("GBP/USD")?,
             Amount::Quantity {
                 quantity: BigDecimal::from(10),
@@ -490,7 +490,7 @@ mod tests {
             BigDecimal::from_str("1.31")?,
         )?;
 
-        let order_request = OrderRequest::create_market_buy(
+        let order_request = OrderRequest::market_buy(
             CryptoPair::from_str("GBP/USD")?,
             Amount::Quantity {
                 quantity: BigDecimal::from(10),
@@ -516,7 +516,7 @@ mod tests {
             BigDecimal::from_str("1.32")?,
         )?;
 
-        let order_request = OrderRequest::create_market_buy(
+        let order_request = OrderRequest::market_buy(
             CryptoPair::from_str("GBP/USD")?,
             Amount::Quantity {
                 quantity: BigDecimal::from(10),
@@ -563,7 +563,7 @@ mod tests {
             BigDecimal::from_str("1.32")?,
         )?;
 
-        let order_request = OrderRequest::create_market_buy(
+        let order_request = OrderRequest::market_buy(
             CryptoPair::from_str("GBP/USD")?,
             Amount::Quantity {
                 quantity: BigDecimal::from(10),
@@ -610,7 +610,7 @@ mod tests {
         broker.update_balance("GBP", BigDecimal::from(11));
         broker.update_buying_power("GBP", BigDecimal::from(11));
 
-        let order_request = OrderRequest::create_market_sell(
+        let order_request = OrderRequest::market_sell(
             CryptoPair::from_str("GBP/USD")?,
             Amount::Quantity {
                 quantity: BigDecimal::from(10),
@@ -662,7 +662,7 @@ mod tests {
         broker.update_balance("GBP", BigDecimal::from(11));
         broker.update_buying_power("GBP", BigDecimal::from(11));
 
-        let order_request = OrderRequest::create_market_sell(
+        let order_request = OrderRequest::market_sell(
             CryptoPair::from_str("GBP/USD")?,
             Amount::Quantity {
                 quantity: BigDecimal::from(10),
@@ -711,7 +711,7 @@ mod tests {
             BigDecimal::from_str("1.31")?,
         )?;
 
-        let order_request = OrderRequest::create_limit_buy(
+        let order_request = OrderRequest::limit_buy(
             CryptoPair::from_str("GBP/USD")?,
             Amount::Quantity {
                 quantity: BigDecimal::from(10),
@@ -787,7 +787,7 @@ mod tests {
             BigDecimal::from_str("1.31")?,
         )?;
 
-        let order_request = OrderRequest::create_limit_buy(
+        let order_request = OrderRequest::limit_buy(
             CryptoPair::from_str("GBP/USD")?,
             Amount::Quantity {
                 quantity: BigDecimal::from(10),
@@ -863,7 +863,7 @@ mod tests {
         broker.update_balance("GBP", BigDecimal::from(12));
         broker.update_buying_power("GBP", BigDecimal::from(12));
 
-        let order_request = OrderRequest::create_limit_sell(
+        let order_request = OrderRequest::limit_sell(
             CryptoPair::from_str("GBP/USD")?,
             Amount::Quantity {
                 quantity: BigDecimal::from(10),
@@ -944,7 +944,7 @@ mod tests {
         broker.update_balance("GBP", BigDecimal::from(12));
         broker.update_buying_power("GBP", BigDecimal::from(12));
 
-        let order_request = OrderRequest::create_limit_sell(
+        let order_request = OrderRequest::limit_sell(
             CryptoPair::from_str("GBP/USD")?,
             Amount::Quantity {
                 quantity: BigDecimal::from(10),
@@ -1022,7 +1022,7 @@ mod tests {
             BigDecimal::from_str("1.31")?,
         )?;
 
-        let order_request = OrderRequest::create_limit_buy(
+        let order_request = OrderRequest::limit_buy(
             CryptoPair::from_str("GBP/USD")?,
             Amount::Quantity {
                 quantity: BigDecimal::from(10),
@@ -1070,7 +1070,7 @@ mod tests {
             BigDecimal::from_str("1.31")?,
         )?;
 
-        let order_request = OrderRequest::create_limit_buy(
+        let order_request = OrderRequest::limit_buy(
             CryptoPair::from_str("GBP/USD")?,
             Amount::Quantity {
                 quantity: BigDecimal::from(10),
@@ -1118,7 +1118,7 @@ mod tests {
         broker.update_balance("GBP", BigDecimal::from_str("10.5")?);
         broker.update_buying_power("GBP", BigDecimal::from_str("10.5")?);
 
-        let order_request = OrderRequest::create_limit_sell(
+        let order_request = OrderRequest::limit_sell(
             CryptoPair::from_str("GBP/USD")?,
             Amount::Quantity {
                 quantity: BigDecimal::from(10),
@@ -1171,7 +1171,7 @@ mod tests {
         broker.update_balance("GBP", BigDecimal::from_str("10.5")?);
         broker.update_buying_power("GBP", BigDecimal::from_str("10.5")?);
 
-        let order_request = OrderRequest::create_limit_sell(
+        let order_request = OrderRequest::limit_sell(
             CryptoPair::from_str("GBP/USD")?,
             Amount::Quantity {
                 quantity: BigDecimal::from(10),

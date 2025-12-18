@@ -93,7 +93,7 @@ mod tests {
     async fn buy_market_returns_order_id() -> Result<()> {
         let mut client = create_client()?;
 
-        let order_request = OrderRequest::create_market_buy(
+        let order_request = OrderRequest::market_buy(
             CryptoPair::from_str(TEN_DOLLARS_CRYPTO_PAIR)?,
             Amount::Notional {
                 notional: BigDecimal::from(10),
@@ -111,7 +111,7 @@ mod tests {
     async fn sell_market_returns_order_id() -> Result<()> {
         let mut client = create_client()?;
 
-        let buy_request = OrderRequest::create_market_buy(
+        let buy_request = OrderRequest::market_buy(
             CryptoPair::from_str(TEN_DOLLARS_CRYPTO_PAIR)?,
             Amount::Notional {
                 notional: BigDecimal::from(10),
@@ -120,7 +120,7 @@ mod tests {
 
         client.place_order(buy_request).await?;
 
-        let sell_request = OrderRequest::create_market_sell(
+        let sell_request = OrderRequest::market_sell(
             CryptoPair::from_str(TEN_DOLLARS_CRYPTO_PAIR)?,
             Amount::Notional {
                 notional: BigDecimal::from(10),
@@ -139,7 +139,7 @@ mod tests {
 
         assert_eq!(client.get_orders().await?.len(), 0);
 
-        let buy_request = OrderRequest::create_market_buy(
+        let buy_request = OrderRequest::market_buy(
             CryptoPair::from_str(TEN_DOLLARS_CRYPTO_PAIR)?,
             Amount::Notional {
                 notional: BigDecimal::from(10),
@@ -150,7 +150,7 @@ mod tests {
 
         assert_eq!(client.get_orders().await?.len(), 1);
 
-        let sell_request = OrderRequest::create_market_sell(
+        let sell_request = OrderRequest::market_sell(
             CryptoPair::from_str(TEN_DOLLARS_CRYPTO_PAIR)?,
             Amount::Notional {
                 notional: BigDecimal::from(10),
@@ -198,7 +198,7 @@ mod tests {
 
         assert_eq!(client.get_account().await?.cash, BigDecimal::from(1000));
 
-        let order_request = OrderRequest::create_market_buy(
+        let order_request = OrderRequest::market_buy(
             CryptoPair::from_str(TEN_DOLLARS_CRYPTO_PAIR)?,
             Amount::Notional {
                 notional: BigDecimal::from(10),
@@ -209,7 +209,7 @@ mod tests {
 
         assert_eq!(client.get_account().await?.cash, BigDecimal::from(990));
 
-        let order_request = OrderRequest::create_market_sell(
+        let order_request = OrderRequest::market_sell(
             CryptoPair::from_str(TEN_DOLLARS_CRYPTO_PAIR)?,
             Amount::Notional {
                 notional: BigDecimal::from(5),
@@ -235,7 +235,7 @@ mod tests {
             None
         );
 
-        let order_request = OrderRequest::create_market_buy(
+        let order_request = OrderRequest::market_buy(
             CryptoPair::from_str(TEN_DOLLARS_CRYPTO_PAIR)?,
             Amount::Notional {
                 notional: BigDecimal::from(15),
@@ -254,7 +254,7 @@ mod tests {
             }
         );
 
-        let order_request = OrderRequest::create_market_sell(
+        let order_request = OrderRequest::market_sell(
             CryptoPair::from_str(TEN_DOLLARS_CRYPTO_PAIR)?,
             Amount::Notional {
                 notional: BigDecimal::from(10),

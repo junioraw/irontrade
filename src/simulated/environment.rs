@@ -156,7 +156,7 @@ mod tests {
     async fn place_order_without_init() -> Result<()> {
         let mut env = create_environment(TestDataSource, TestClock);
         let err = env
-            .place_order(OrderRequest::create_market_buy(
+            .place_order(OrderRequest::market_buy(
                 "USDT/GBP".parse()?,
                 Amount::Quantity {
                     quantity: BigDecimal::from(10),

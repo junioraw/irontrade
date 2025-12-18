@@ -27,7 +27,7 @@ async fn main() -> Result<()> {
     client.set_notional_per_unit(avax_gbp_pair.clone(), BigDecimal::from_str("8.81")?)?;
 
     let order_id = client
-        .place_order(OrderRequest::create_market_buy(
+        .place_order(OrderRequest::market_buy(
             avax_gbp_pair,
             Amount::Quantity {
                 quantity: BigDecimal::from(10),

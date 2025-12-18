@@ -12,7 +12,7 @@ pub struct OrderRequest {
 }
 
 impl OrderRequest {
-    pub fn create_market_buy(crypto_pair: CryptoPair, amount: Amount) -> Self {
+    pub fn market_buy(crypto_pair: CryptoPair, amount: Amount) -> Self {
         OrderRequest {
             crypto_pair,
             amount,
@@ -21,7 +21,7 @@ impl OrderRequest {
         }
     }
 
-    pub fn create_market_sell(crypto_pair: CryptoPair, amount: Amount) -> Self {
+    pub fn market_sell(crypto_pair: CryptoPair, amount: Amount) -> Self {
         OrderRequest {
             crypto_pair,
             amount,
@@ -30,7 +30,7 @@ impl OrderRequest {
         }
     }
 
-    pub fn create_limit_buy(crypto_pair: CryptoPair, amount: Amount, limit_price: BigDecimal) -> Self {
+    pub fn limit_buy(crypto_pair: CryptoPair, amount: Amount, limit_price: BigDecimal) -> Self {
         OrderRequest {
             crypto_pair,
             amount,
@@ -39,7 +39,7 @@ impl OrderRequest {
         }
     }
 
-    pub fn create_limit_sell(crypto_pair: CryptoPair, amount: Amount, limit_price: BigDecimal) -> Self {
+    pub fn limit_sell(crypto_pair: CryptoPair, amount: Amount, limit_price: BigDecimal) -> Self {
         OrderRequest {
             crypto_pair,
             amount,
