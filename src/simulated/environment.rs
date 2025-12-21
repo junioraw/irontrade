@@ -59,8 +59,8 @@ impl SimulatedEnvironment {
         if self.last_processed_time.is_none() {
             return Err(anyhow!("Environment has not been initialized"));
         }
-        let now = self.clock.now();
-        let mut last_processed_time = self.last_processed_time.unwrap_or(now);
+        let now = dbg!(self.clock.now());
+        let mut last_processed_time = dbg!(self.last_processed_time.unwrap_or(now));
         while last_processed_time <= now {
             for crypto_pair in self.crypto_pairs_to_trade.clone() {
                 let bar = self
@@ -132,7 +132,7 @@ impl Environment for SimulatedEnvironment {}
 #[cfg(test)]
 mod tests {
     use crate::api::client::Client;
-    use crate::api::common::{Amount, Bar, CryptoPair};
+    use crate::api::common::{Amount, Bar, CryptoPair, OrderStatus};
     use crate::api::market::Market;
     use crate::api::request::OrderRequest;
     use crate::simulated::broker::SimulatedBrokerBuilder;
@@ -149,7 +149,7 @@ mod tests {
 
     #[test]
     fn init_twice() -> Result<()> {
-        let mut env = create_environment(TestDataSource, TestClock);
+        let mut env = create_environment(TestDataSource, TestClock, HashSet::new());
         env.init()?;
         let err = env.init().unwrap_err();
         assert_eq!(err.to_string(), "Environment has already been initialized");
@@ -158,7 +158,7 @@ mod tests {
 
     #[tokio::test]
     async fn place_order_without_init() -> Result<()> {
-        let mut env = create_environment(TestDataSource, TestClock);
+        let mut env = create_environment(TestDataSource, TestClock, HashSet::new());
         let err = env
             .place_order(OrderRequest::market_buy(
                 "USDT/GBP".parse()?,
@@ -173,8 +173,100 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn place_order_without_bars() -> Result<()> {
+        let current_time = DateTime::<Utc>::from_str("2025-12-17T18:30:00+00:00")?;
+        let bar_from_three_minutes_ago = create_bar(10, 20, current_time - Duration::minutes(3));
+        let data_source = create_data_source(vec![bar_from_three_minutes_ago]);
+        let added_duration = Arc::new(RwLock::new(Duration::zero()));
+        let clock = StepClock {
+            initial_time: current_time - Duration::minutes(5),
+            added_duration: added_duration.clone(),
+        };
+        let mut env = create_environment(data_source, clock, HashSet::new());
+        env.init()?;
+
+        let result = env
+            .place_order(OrderRequest::market_buy(
+                "COIN/GBP".parse()?,
+                Amount::Quantity {
+                    quantity: BigDecimal::from(10),
+                },
+            ))
+            .await;
+        assert!(result.is_err());
+
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn place_market_order_after_updating_to_current_time() -> Result<()> {
+        let current_time = DateTime::<Utc>::from_str("2025-12-17T18:30:00+00:00")?;
+        let bar_from_three_minutes_ago = create_bar(10, 20, current_time - Duration::minutes(3));
+        let data_source = create_data_source(vec![bar_from_three_minutes_ago]);
+        let added_duration = Arc::new(RwLock::new(Duration::zero()));
+        let clock = StepClock {
+            initial_time: current_time - Duration::minutes(5),
+            added_duration: added_duration.clone(),
+        };
+        let mut pairs_to_trade = HashSet::new();
+        pairs_to_trade.insert(CryptoPair::from_str("COIN/GBP")?);
+        let mut env = create_environment(data_source, clock, pairs_to_trade);
+        env.init()?;
+        *added_duration.write().unwrap() += Duration::minutes(5);
+        env.update()?;
+
+        let order_id = env
+            .place_order(OrderRequest::market_buy(
+                "COIN/GBP".parse()?,
+                Amount::Quantity {
+                    quantity: BigDecimal::from(10),
+                },
+            ))
+            .await?;
+        assert_ne!(order_id, "");
+
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn place_limit_order() -> Result<()> {
+        let current_time = DateTime::<Utc>::from_str("2025-12-17T18:30:00+00:00")?;
+        let bar_from_three_minutes_ago = create_bar(10, 20, current_time - Duration::minutes(3));
+        let bar_from_two_minutes_ago = create_bar(5, 10, current_time - Duration::minutes(2));
+        let data_source =
+            create_data_source(vec![bar_from_three_minutes_ago, bar_from_two_minutes_ago]);
+        let added_duration = Arc::new(RwLock::new(Duration::zero()));
+        let clock = StepClock {
+            initial_time: current_time - Duration::minutes(5),
+            added_duration: added_duration.clone(),
+        };
+        let mut pairs_to_trade = HashSet::new();
+        pairs_to_trade.insert(CryptoPair::from_str("COIN/GBP")?);
+        let mut env = create_environment(data_source, clock, pairs_to_trade);
+        env.init()?;
+        *added_duration.write().unwrap() += Duration::minutes(2);
+        env.update()?;
+
+        let order_id = env
+            .place_order(OrderRequest::limit_buy(
+                "COIN/GBP".parse()?,
+                Amount::Quantity {
+                    quantity: BigDecimal::from(10),
+                },
+                BigDecimal::from(9),
+            ))
+            .await?;
+        assert_eq!(env.get_order(&order_id).await?.status, OrderStatus::New);
+
+        *added_duration.write().unwrap() += Duration::minutes(2);
+        assert_eq!(env.get_order(&order_id).await?.status, OrderStatus::Filled);
+
+        Ok(())
+    }
+
+    #[tokio::test]
     async fn get_orders_without_init() -> Result<()> {
-        let mut env = create_environment(TestDataSource, TestClock);
+        let mut env = create_environment(TestDataSource, TestClock, HashSet::new());
         let err = env.get_orders().await.unwrap_err();
         assert_eq!(err.to_string(), "Environment has not been initialized");
         Ok(())
@@ -182,7 +274,7 @@ mod tests {
 
     #[tokio::test]
     async fn get_order_without_init() -> Result<()> {
-        let mut env = create_environment(TestDataSource, TestClock);
+        let mut env = create_environment(TestDataSource, TestClock, HashSet::new());
         let err = env.get_order("123").await.unwrap_err();
         assert_eq!(err.to_string(), "Environment has not been initialized");
         Ok(())
@@ -190,7 +282,7 @@ mod tests {
 
     #[tokio::test]
     async fn get_account_without_init() -> Result<()> {
-        let mut env = create_environment(TestDataSource, TestClock);
+        let mut env = create_environment(TestDataSource, TestClock, HashSet::new());
         let err = env.get_account().await.unwrap_err();
         assert_eq!(err.to_string(), "Environment has not been initialized");
         Ok(())
@@ -198,7 +290,7 @@ mod tests {
 
     #[tokio::test]
     async fn get_latest_bar_current_time() -> Result<()> {
-        let crypto_pair = CryptoPair::from_str("COIN/USD")?;
+        let crypto_pair = CryptoPair::from_str("COIN/GBP")?;
         let bar_duration = Duration::minutes(1);
         let current_time = DateTime::<Utc>::from_str("2025-12-17T18:30:00+00:00")?;
         let bar_from_three_minutes_ago = create_bar(10, 20, current_time - Duration::minutes(3));
@@ -208,7 +300,7 @@ mod tests {
             initial_time: current_time,
             added_duration: added_duration.clone(),
         };
-        let mut env = create_environment(data_source, clock);
+        let mut env = create_environment(data_source, clock, HashSet::new());
         env.init()?;
 
         assert_eq!(
@@ -221,7 +313,7 @@ mod tests {
 
     #[tokio::test]
     async fn get_latest_bar_no_bars_yet_at_clock_time() -> Result<()> {
-        let crypto_pair = CryptoPair::from_str("COIN/USD")?;
+        let crypto_pair = CryptoPair::from_str("COIN/GBP")?;
         let bar_duration = Duration::minutes(1);
         let current_time = DateTime::<Utc>::from_str("2025-12-17T18:30:00+00:00")?;
         let bar_from_three_minutes_ago = create_bar(10, 20, current_time - Duration::minutes(3));
@@ -231,7 +323,7 @@ mod tests {
             initial_time: current_time - Duration::minutes(5),
             added_duration: added_duration.clone(),
         };
-        let mut env = create_environment(data_source, clock);
+        let mut env = create_environment(data_source, clock, HashSet::new());
         env.init()?;
 
         *added_duration.write().unwrap() += Duration::minutes(1) + Duration::seconds(59);
@@ -242,7 +334,7 @@ mod tests {
 
     #[tokio::test]
     async fn get_latest_bar_overlapping_bar() -> Result<()> {
-        let crypto_pair = CryptoPair::from_str("COIN/USD")?;
+        let crypto_pair = CryptoPair::from_str("COIN/GBP")?;
         let bar_duration = Duration::minutes(1);
         let current_time = DateTime::<Utc>::from_str("2025-12-17T18:30:00+00:00")?;
         let bar_from_three_minutes_ago = create_bar(10, 20, current_time - Duration::minutes(3));
@@ -256,7 +348,7 @@ mod tests {
             initial_time: current_time - Duration::minutes(5),
             added_duration: added_duration.clone(),
         };
-        let mut env = create_environment(data_source, clock);
+        let mut env = create_environment(data_source, clock, HashSet::new());
         env.init()?;
 
         *added_duration.write().unwrap() += Duration::minutes(3) + Duration::seconds(59);
@@ -301,14 +393,22 @@ mod tests {
         }
     }
 
-    fn create_environment<B, C>(data_source: B, clock: C) -> SimulatedEnvironment
+    fn create_environment<B, C>(
+        data_source: B,
+        clock: C,
+        pairs_to_trade: HashSet<CryptoPair>,
+    ) -> SimulatedEnvironment
     where
         B: BarDataSource + Send + Sync + 'static,
         C: Clock + Send + Sync + 'static,
     {
         SimulatedEnvironment::new(
-            SimulatedClient::new(SimulatedBrokerBuilder::new("GBP").build()),
-            HashSet::new(),
+            SimulatedClient::new(
+                SimulatedBrokerBuilder::new("GBP")
+                    .set_balance(BigDecimal::from(100_000))
+                    .build(),
+            ),
+            pairs_to_trade,
             data_source,
             clock,
             Duration::minutes(1),
