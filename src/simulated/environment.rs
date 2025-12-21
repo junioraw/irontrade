@@ -59,8 +59,8 @@ impl SimulatedEnvironment {
         if self.last_processed_time.is_none() {
             return Err(anyhow!("Environment has not been initialized"));
         }
-        let now = dbg!(self.clock.now());
-        let mut last_processed_time = dbg!(self.last_processed_time.unwrap_or(now));
+        let now = self.clock.now();
+        let mut last_processed_time = self.last_processed_time.unwrap_or(now);
         while last_processed_time <= now {
             for crypto_pair in self.crypto_pairs_to_trade.clone() {
                 let bar = self
