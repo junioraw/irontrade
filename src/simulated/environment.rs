@@ -21,7 +21,6 @@ pub struct SimulatedEnvironment {
     clock: Box<dyn Clock + Send + Sync>,
     bar_duration: Duration,
     refresh_duration: Duration,
-    last_seen_bar: Option<Bar>,
 }
 
 impl SimulatedEnvironment {
@@ -45,7 +44,6 @@ impl SimulatedEnvironment {
             clock: Box::new(clock),
             bar_duration,
             refresh_duration,
-            last_seen_bar: None,
         }
     }
 
@@ -116,7 +114,7 @@ impl Market for SimulatedEnvironment {
             .bar_data_source
             .get_bar(crypto_pair, &now, bar_duration)?;
         if bar.is_none() {
-            return Ok(self.last_seen_bar.clone());
+            return Ok(None);
         }
         let bar = bar.unwrap();
         if bar.date_time + bar_duration > now {
