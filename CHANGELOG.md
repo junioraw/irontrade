@@ -1,3 +1,7 @@
+0.7.0
+----
+WIP
+
 0.6.0
 ----
 - Update documentation example to match latest API
