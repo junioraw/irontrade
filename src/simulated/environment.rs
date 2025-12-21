@@ -21,6 +21,7 @@ pub struct SimulatedEnvironment {
     clock: Box<dyn Clock + Send + Sync>,
     bar_duration: Duration,
     refresh_duration: Duration,
+    last_seen_bar: Option<Bar>,
 }
 
 impl SimulatedEnvironment {
@@ -44,6 +45,7 @@ impl SimulatedEnvironment {
             clock: Box::new(clock),
             bar_duration,
             refresh_duration,
+            last_seen_bar: None,
         }
     }
 
@@ -114,12 +116,14 @@ impl Market for SimulatedEnvironment {
             .bar_data_source
             .get_bar(crypto_pair, &now, bar_duration)?;
         if bar.is_none() {
-            return Ok(None);
+            return Ok(self.last_seen_bar.clone());
         }
         let bar = bar.unwrap();
         if bar.date_time + bar_duration > now {
             // In a real environment bars would only be returned for the past
-            return Ok(None);
+            return self
+                .bar_data_source
+                .get_bar(&crypto_pair, &(now - bar_duration), bar_duration);
         }
         Ok(Some(bar))
     }
@@ -131,6 +135,7 @@ impl Environment for SimulatedEnvironment {}
 mod tests {
     use crate::api::client::Client;
     use crate::api::common::{Amount, Bar, CryptoPair};
+    use crate::api::market::Market;
     use crate::api::request::OrderRequest;
     use crate::simulated::broker::SimulatedBrokerBuilder;
     use crate::simulated::client::SimulatedClient;
@@ -142,6 +147,7 @@ mod tests {
     use chrono::{DateTime, Duration, Utc};
     use std::collections::HashSet;
     use std::str::FromStr;
+    use std::sync::{Arc, RwLock};
 
     #[test]
     fn init_twice() -> Result<()> {
@@ -192,6 +198,111 @@ mod tests {
         Ok(())
     }
 
+    #[tokio::test]
+    async fn get_latest_bar_current_time() -> Result<()> {
+        let crypto_pair = CryptoPair::from_str("COIN/USD")?;
+        let bar_duration = Duration::minutes(1);
+        let current_time = DateTime::<Utc>::from_str("2025-12-17T18:30:00+00:00")?;
+        let bar_from_three_minutes_ago = create_bar(10, 20, current_time - Duration::minutes(3));
+        let data_source = create_data_source(vec![bar_from_three_minutes_ago.clone()]);
+        let added_duration = Arc::new(RwLock::new(Duration::zero()));
+        let clock = StepClock {
+            initial_time: current_time,
+            added_duration: added_duration.clone(),
+        };
+        let mut env = create_environment(data_source, clock);
+        env.init()?;
+
+        assert_eq!(
+            env.get_latest_bar(&crypto_pair, bar_duration).await?,
+            Some(bar_from_three_minutes_ago)
+        );
+
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn get_latest_bar_no_bars_yet_at_clock_time() -> Result<()> {
+        let crypto_pair = CryptoPair::from_str("COIN/USD")?;
+        let bar_duration = Duration::minutes(1);
+        let current_time = DateTime::<Utc>::from_str("2025-12-17T18:30:00+00:00")?;
+        let bar_from_three_minutes_ago = create_bar(10, 20, current_time - Duration::minutes(3));
+        let data_source = create_data_source(vec![bar_from_three_minutes_ago]);
+        let added_duration = Arc::new(RwLock::new(Duration::zero()));
+        let clock = StepClock {
+            initial_time: current_time - Duration::minutes(5),
+            added_duration: added_duration.clone(),
+        };
+        let mut env = create_environment(data_source, clock);
+        env.init()?;
+
+        *added_duration.write().unwrap() += Duration::minutes(1) + Duration::seconds(59);
+        assert_eq!(env.get_latest_bar(&crypto_pair, bar_duration).await?, None);
+
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn get_latest_bar_overlapping_bar() -> Result<()> {
+        let crypto_pair = CryptoPair::from_str("COIN/USD")?;
+        let bar_duration = Duration::minutes(1);
+        let current_time = DateTime::<Utc>::from_str("2025-12-17T18:30:00+00:00")?;
+        let bar_from_three_minutes_ago = create_bar(10, 20, current_time - Duration::minutes(3));
+        let bar_from_two_minutes_ago = create_bar(100, 200, current_time - Duration::minutes(2));
+        let data_source = create_data_source(vec![
+            bar_from_three_minutes_ago.clone(),
+            bar_from_two_minutes_ago,
+        ]);
+        let added_duration = Arc::new(RwLock::new(Duration::zero()));
+        let clock = StepClock {
+            initial_time: current_time - Duration::minutes(5),
+            added_duration: added_duration.clone(),
+        };
+        let mut env = create_environment(data_source, clock);
+        env.init()?;
+
+        *added_duration.write().unwrap() += Duration::minutes(3) + Duration::seconds(59);
+        assert_eq!(
+            env.get_latest_bar(&crypto_pair, bar_duration).await?,
+            Some(bar_from_three_minutes_ago)
+        );
+
+        Ok(())
+    }
+
+    fn create_data_source(ordered_bars: Vec<Bar>) -> impl BarDataSource {
+        struct DataSource {
+            ordered_bars: Vec<Bar>,
+        }
+        let data_source = DataSource { ordered_bars };
+        impl BarDataSource for DataSource {
+            fn get_bar(
+                &self,
+                _crypto_pair: &CryptoPair,
+                date_time: &DateTime<Utc>,
+                _bar_duration: Duration,
+            ) -> Result<Option<Bar>> {
+                for bar in self.ordered_bars.iter().rev() {
+                    if bar.date_time <= *date_time {
+                        return Ok(Some(bar.clone()));
+                    }
+                }
+                Ok(None)
+            }
+        }
+        data_source
+    }
+
+    fn create_bar(low: i32, high: i32, date_time: DateTime<Utc>) -> Bar {
+        Bar {
+            low: BigDecimal::from(low),
+            high: BigDecimal::from(high),
+            open: BigDecimal::from(low),
+            close: BigDecimal::from(high),
+            date_time,
+        }
+    }
+
     fn create_environment<B, C>(data_source: B, clock: C) -> SimulatedEnvironment
     where
         B: BarDataSource + Send + Sync + 'static,
@@ -207,6 +318,17 @@ mod tests {
         )
     }
 
+    struct StepClock {
+        initial_time: DateTime<Utc>,
+        added_duration: Arc<RwLock<Duration>>,
+    }
+
+    impl Clock for StepClock {
+        fn now(&self) -> DateTime<Utc> {
+            self.initial_time + *self.added_duration.read().unwrap()
+        }
+    }
+
     struct TestDataSource;
     impl BarDataSource for TestDataSource {
         fn get_bar(
@@ -218,6 +340,7 @@ mod tests {
             unimplemented!("Test method")
         }
     }
+
     struct TestClock;
     impl Clock for TestClock {
         fn now(&self) -> DateTime<Utc> {

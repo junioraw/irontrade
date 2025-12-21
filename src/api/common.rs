@@ -70,7 +70,7 @@ pub struct CryptoPair {
     pub quantity_coin: String,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Bar {
     pub low: BigDecimal,
     pub high: BigDecimal,
