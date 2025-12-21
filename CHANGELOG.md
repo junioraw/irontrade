@@ -1,3 +1,16 @@
+0.6.0
+----
+- Update documentation example to match latest API
+- Remove `create` prefix in `OrderRequest` creation functions
+- Implement fee in `SimulatedClient`
+- Rename `AssetPair` to `CryptoPair`
+- Implement clock update logic in `SimulatedEnvironment`
+- Expose `crate::simulated::time` and `crate::simulated::data` as public APIs
+- Replace `num_decimal` with `bigdecimal` for numerical representation
+- Add `SimulatedEnvironment`
+- Make `BarDataSource` a trait instead of a struct
+- Remove `Market.get_latest_quotes`
+
 0.5.1
 ----
 - Make mod `api::environment` public
