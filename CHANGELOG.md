@@ -1,6 +1,9 @@
-0.7.0-alpha02
+0.7.0-alpha03
 ----
-- Add `crate::simulated::context::SimulatedContext` and pass it as an argument for `SimulatedEnvironment` instead of `Clock` and
+
+- Add `crate::simulated::environment::SimulatedEnvironmentBuilder` and make `SimulatedEnvironment::new` private
+- Add `crate::simulated::context::SimulatedContext` and pass it as an argument for `SimulatedEnvironment` instead of
+  `Clock` and
   `BarDataSource` separately
 
 0.6.0
