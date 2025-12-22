@@ -1,4 +1,4 @@
-0.7.0
+0.7.0-alpha01
 ----
 
 - Add `crate::simulated::SimulatedContext` and pass it as an argument for `SimulatedEnvironment` instead of `Clock` and
