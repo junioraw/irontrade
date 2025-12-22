@@ -21,8 +21,56 @@ pub struct SimulatedEnvironment {
     refresh_duration: Duration,
 }
 
+pub struct SimulatedEnvironmentBuilder {
+    context: SimulatedContext,
+    client: SimulatedClient,
+    crypto_pairs_to_trade: HashSet<CryptoPair>,
+    bar_duration: Duration,
+    refresh_duration: Duration,
+}
+
+impl SimulatedEnvironmentBuilder {
+    pub fn new(context: SimulatedContext, client: SimulatedClient) -> Self {
+        Self {
+            context,
+            client,
+            crypto_pairs_to_trade: HashSet::new(),
+            bar_duration: Duration::minutes(1),
+            refresh_duration: Duration::seconds(30),
+        }
+    }
+
+    pub fn set_crypto_pairs_to_trade(
+        &mut self,
+        crypto_pairs_to_trade: HashSet<CryptoPair>,
+    ) -> &mut Self {
+        self.crypto_pairs_to_trade = crypto_pairs_to_trade;
+        self
+    }
+
+    pub fn set_bar_duration(&mut self, bar_duration: Duration) -> &mut Self {
+        self.bar_duration = bar_duration;
+        self
+    }
+
+    pub fn set_refresh_duration(&mut self, refresh_duration: Duration) -> &mut Self {
+        self.refresh_duration = refresh_duration;
+        self
+    }
+
+    pub fn build(&self) -> SimulatedEnvironment {
+        SimulatedEnvironment::new(
+            self.context.clone(),
+            self.client.clone(),
+            self.crypto_pairs_to_trade.clone(),
+            self.bar_duration,
+            self.refresh_duration,
+        )
+    }
+}
+
 impl SimulatedEnvironment {
-    pub fn new(
+    fn new(
         context: SimulatedContext,
         client: SimulatedClient,
         crypto_pairs_to_trade: HashSet<CryptoPair>,
@@ -136,7 +184,7 @@ mod tests {
     use crate::simulated::client::SimulatedClient;
     use crate::simulated::context::SimulatedContext;
     use crate::simulated::data::BarDataSource;
-    use crate::simulated::environment::SimulatedEnvironment;
+    use crate::simulated::environment::{SimulatedEnvironment, SimulatedEnvironmentBuilder};
     use crate::simulated::time::Clock;
     use anyhow::Result;
     use bigdecimal::BigDecimal;
@@ -359,6 +407,7 @@ mod tests {
     }
 
     fn create_data_source(ordered_bars: Vec<Bar>) -> impl BarDataSource {
+        #[derive(Clone)]
         struct DataSource {
             ordered_bars: Vec<Bar>,
         }
@@ -400,19 +449,21 @@ mod tests {
         B: BarDataSource + Send + Sync + 'static,
         C: Clock + Send + Sync + 'static,
     {
-        SimulatedEnvironment::new(
+        SimulatedEnvironmentBuilder::new(
             SimulatedContext::new(data_source, clock),
             SimulatedClient::new(
                 SimulatedBrokerBuilder::new("GBP")
                     .set_balance(BigDecimal::from(100_000))
                     .build(),
             ),
-            pairs_to_trade,
-            Duration::minutes(1),
-            Duration::seconds(1),
         )
+        .set_crypto_pairs_to_trade(pairs_to_trade)
+        .set_bar_duration(Duration::minutes(1))
+        .set_refresh_duration(Duration::seconds(30))
+        .build()
     }
 
+    #[derive(Clone)]
     struct StepClock {
         initial_time: DateTime<Utc>,
         added_duration: Arc<RwLock<Duration>>,
@@ -424,7 +475,9 @@ mod tests {
         }
     }
 
+    #[derive(Clone)]
     struct TestDataSource;
+
     impl BarDataSource for TestDataSource {
         fn get_bar(
             &self,
@@ -436,7 +489,9 @@ mod tests {
         }
     }
 
+    #[derive(Clone)]
     struct TestClock;
+
     impl Clock for TestClock {
         fn now(&self) -> DateTime<Utc> {
             DateTime::<Utc>::from_str("2025-12-17T18:30:00+00:00").unwrap()

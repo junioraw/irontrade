@@ -9,6 +9,7 @@ use anyhow::Result;
 use bigdecimal::BigDecimal;
 use std::collections::HashMap;
 
+#[derive(Clone)]
 pub struct SimulatedClient {
     broker: SimulatedBroker,
 }
