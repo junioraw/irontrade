@@ -1,9 +1,12 @@
 0.7.0
 ----
-WIP
+
+- Add `crate::simulated::SimulatedContext` and pass it as an argument for `SimulatedEnvironment` instead of `Clock` and
+  `BarDataSource` separately.
 
 0.6.0
 ----
+
 - Update documentation example to match latest API
 - Remove `create` prefix in `OrderRequest` creation functions
 - Implement fee in `SimulatedClient`
@@ -17,16 +20,19 @@ WIP
 
 0.5.1
 ----
+
 - Make mod `api::environment` public
 
 0.5.0
 ----
+
 - Rename `IronTradeClient` to `Client`
 - Add `api::market::Market` interface
 - Add `api::environment::Environment` interface
 - Add `Client.get_order(order_id)` function
 - Add `api::common::Account` struct and `Client.get_account` function
-- Remove `Client.get_buying_power`, `Client.get_cash` and `Client.get_open_position` as those fields are all now part of `Account struct`
+- Remove `Client.get_buying_power`, `Client.get_cash` and `Client.get_open_position` as those fields are all now part of
+  `Account struct`
 
 0.4.0
 ----
