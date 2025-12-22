@@ -6,4 +6,4 @@ pub mod client;
 pub mod environment;
 pub mod time;
 pub mod data;
-mod context;
+pub mod context;
