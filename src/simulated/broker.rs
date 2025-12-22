@@ -9,7 +9,7 @@ use std::collections::{HashMap, HashSet};
 use std::str::FromStr;
 use uuid::Uuid;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct SimulatedBroker {
     currency: String,
     notional_assets: HashSet<String>,

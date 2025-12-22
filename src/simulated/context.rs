@@ -4,6 +4,7 @@
 use crate::simulated::data::BarDataSource;
 use crate::simulated::time::Clock;
 
+#[derive(Clone)]
 pub struct SimulatedContext {
     clock: Box<dyn Clock + Send + Sync>,
     bar_data_source: Box<dyn BarDataSource + Send + Sync>,
@@ -15,13 +16,16 @@ impl SimulatedContext {
         B: BarDataSource + Send + Sync + 'static,
         C: Clock + Send + Sync + 'static,
     {
-        Self { bar_data_source: Box::new(bar_data_source), clock: Box::new(clock) }
+        Self {
+            bar_data_source: Box::new(bar_data_source),
+            clock: Box::new(clock),
+        }
     }
-    
+
     pub fn clock(&self) -> &dyn Clock {
         self.clock.as_ref()
     }
-    
+
     pub fn bar_data_source(&self) -> &dyn BarDataSource {
         self.bar_data_source.as_ref()
     }
