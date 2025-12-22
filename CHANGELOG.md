@@ -1,4 +1,4 @@
-0.7.0-alpha01
+0.7.0-alpha02
 ----
 - Add `crate::simulated::context::SimulatedContext` and pass it as an argument for `SimulatedEnvironment` instead of `Clock` and
   `BarDataSource` separately
