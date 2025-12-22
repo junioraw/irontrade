@@ -7,41 +7,33 @@ use crate::api::environment::Environment;
 use crate::api::market::Market;
 use crate::api::request::OrderRequest;
 use crate::simulated::client::SimulatedClient;
-use crate::simulated::data::BarDataSource;
-use crate::simulated::time::Clock;
+use crate::simulated::context::SimulatedContext;
 use anyhow::{Result, anyhow};
 use chrono::{DateTime, Duration, Utc};
 use std::collections::HashSet;
 
 pub struct SimulatedEnvironment {
+    context: SimulatedContext,
     client: SimulatedClient,
-    bar_data_source: Box<dyn BarDataSource + Send + Sync>,
     last_processed_time: Option<DateTime<Utc>>,
     crypto_pairs_to_trade: HashSet<CryptoPair>,
-    clock: Box<dyn Clock + Send + Sync>,
     bar_duration: Duration,
     refresh_duration: Duration,
 }
 
 impl SimulatedEnvironment {
-    pub fn new<B, C>(
+    pub fn new(
+        context: SimulatedContext,
         client: SimulatedClient,
         crypto_pairs_to_trade: HashSet<CryptoPair>,
-        bar_data_source: B,
-        clock: C,
         bar_duration: Duration,
         refresh_duration: Duration,
-    ) -> Self
-    where
-        B: BarDataSource + Send + Sync + 'static,
-        C: Clock + Send + Sync + 'static,
-    {
+    ) -> Self {
         SimulatedEnvironment {
+            context,
             client,
-            bar_data_source: Box::new(bar_data_source),
             last_processed_time: None,
             crypto_pairs_to_trade,
-            clock: Box::new(clock),
             bar_duration,
             refresh_duration,
         }
@@ -51,7 +43,7 @@ impl SimulatedEnvironment {
         if self.last_processed_time.is_some() {
             return Err(anyhow!("Environment has already been initialized"));
         }
-        self.last_processed_time = Some(self.clock.now());
+        self.last_processed_time = Some(self.context.clock().now());
         self.update()
     }
 
@@ -59,13 +51,15 @@ impl SimulatedEnvironment {
         if self.last_processed_time.is_none() {
             return Err(anyhow!("Environment has not been initialized"));
         }
-        let now = self.clock.now();
+        let now = self.context.clock().now();
         let mut last_processed_time = self.last_processed_time.unwrap_or(now);
         while last_processed_time <= now {
             for crypto_pair in self.crypto_pairs_to_trade.clone() {
-                let bar = self
-                    .bar_data_source
-                    .get_bar(&crypto_pair, &now, self.bar_duration)?;
+                let bar = self.context.bar_data_source().get_bar(
+                    &crypto_pair,
+                    &now,
+                    self.bar_duration,
+                )?;
                 if let Some(bar) = bar {
                     let value = (bar.low + bar.high) / 2.0;
                     self.client.set_notional_per_unit(crypto_pair, value)?;
@@ -109,9 +103,10 @@ impl Market for SimulatedEnvironment {
         crypto_pair: &CryptoPair,
         bar_duration: Duration,
     ) -> Result<Option<Bar>> {
-        let now = self.clock.now();
+        let now = self.context.clock().now();
         let bar = self
-            .bar_data_source
+            .context
+            .bar_data_source()
             .get_bar(crypto_pair, &now, bar_duration)?;
         if bar.is_none() {
             return Ok(None);
@@ -119,9 +114,11 @@ impl Market for SimulatedEnvironment {
         let bar = bar.unwrap();
         if bar.date_time + bar_duration > now {
             // In a real environment bars would only be returned for the past
-            return self
-                .bar_data_source
-                .get_bar(&crypto_pair, &(now - bar_duration), bar_duration);
+            return self.context.bar_data_source().get_bar(
+                &crypto_pair,
+                &(now - bar_duration),
+                bar_duration,
+            );
         }
         Ok(Some(bar))
     }
@@ -137,6 +134,7 @@ mod tests {
     use crate::api::request::OrderRequest;
     use crate::simulated::broker::SimulatedBrokerBuilder;
     use crate::simulated::client::SimulatedClient;
+    use crate::simulated::context::SimulatedContext;
     use crate::simulated::data::BarDataSource;
     use crate::simulated::environment::SimulatedEnvironment;
     use crate::simulated::time::Clock;
@@ -403,14 +401,13 @@ mod tests {
         C: Clock + Send + Sync + 'static,
     {
         SimulatedEnvironment::new(
+            SimulatedContext::new(data_source, clock),
             SimulatedClient::new(
                 SimulatedBrokerBuilder::new("GBP")
                     .set_balance(BigDecimal::from(100_000))
                     .build(),
             ),
             pairs_to_trade,
-            data_source,
-            clock,
             Duration::minutes(1),
             Duration::seconds(1),
         )
