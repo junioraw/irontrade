@@ -1,14 +1,12 @@
 // Copyright (C) 2025 Agostinho Junior
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-use crate::api::common::{CryptoPair, Bar};
+use crate::api::common::{Bar, CryptoPair};
 use anyhow::Result;
-use chrono::Duration;
 
 pub trait Market {
-    fn get_latest_bar(
+    fn get_latest_minute_bar(
         &self,
-        crypto_pair: &CryptoPair,
-        bar_duration: Duration
+        crypto_pair: &CryptoPair
     ) -> impl Future<Output = Result<Option<Bar>>> + Send;
 }
