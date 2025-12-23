@@ -146,12 +146,9 @@ impl Client for SimulatedEnvironment {
 }
 
 impl Market for SimulatedEnvironment {
-    async fn get_latest_bar(
-        &self,
-        crypto_pair: &CryptoPair,
-        bar_duration: Duration,
-    ) -> Result<Option<Bar>> {
+    async fn get_latest_minute_bar(&self, crypto_pair: &CryptoPair) -> Result<Option<Bar>> {
         let now = self.context.clock().now();
+        let bar_duration = Duration::minutes(1);
         let bar = self
             .context
             .bar_data_source()
@@ -337,7 +334,6 @@ mod tests {
     #[tokio::test]
     async fn get_latest_bar_current_time() -> Result<()> {
         let crypto_pair = CryptoPair::from_str("COIN/GBP")?;
-        let bar_duration = Duration::minutes(1);
         let current_time = DateTime::<Utc>::from_str("2025-12-17T18:30:00+00:00")?;
         let bar_from_three_minutes_ago = create_bar(10, 20, current_time - Duration::minutes(3));
         let data_source = create_data_source(vec![bar_from_three_minutes_ago.clone()]);
@@ -350,7 +346,7 @@ mod tests {
         env.init()?;
 
         assert_eq!(
-            env.get_latest_bar(&crypto_pair, bar_duration).await?,
+            env.get_latest_minute_bar(&crypto_pair).await?,
             Some(bar_from_three_minutes_ago)
         );
 
@@ -360,7 +356,6 @@ mod tests {
     #[tokio::test]
     async fn get_latest_bar_no_bars_yet_at_clock_time() -> Result<()> {
         let crypto_pair = CryptoPair::from_str("COIN/GBP")?;
-        let bar_duration = Duration::minutes(1);
         let current_time = DateTime::<Utc>::from_str("2025-12-17T18:30:00+00:00")?;
         let bar_from_three_minutes_ago = create_bar(10, 20, current_time - Duration::minutes(3));
         let data_source = create_data_source(vec![bar_from_three_minutes_ago]);
@@ -373,7 +368,7 @@ mod tests {
         env.init()?;
 
         *added_duration.write().unwrap() += Duration::minutes(1) + Duration::seconds(59);
-        assert_eq!(env.get_latest_bar(&crypto_pair, bar_duration).await?, None);
+        assert_eq!(env.get_latest_minute_bar(&crypto_pair).await?, None);
 
         Ok(())
     }
@@ -381,7 +376,6 @@ mod tests {
     #[tokio::test]
     async fn get_latest_bar_overlapping_bar() -> Result<()> {
         let crypto_pair = CryptoPair::from_str("COIN/GBP")?;
-        let bar_duration = Duration::minutes(1);
         let current_time = DateTime::<Utc>::from_str("2025-12-17T18:30:00+00:00")?;
         let bar_from_three_minutes_ago = create_bar(10, 20, current_time - Duration::minutes(3));
         let bar_from_two_minutes_ago = create_bar(100, 200, current_time - Duration::minutes(2));
@@ -399,7 +393,7 @@ mod tests {
 
         *added_duration.write().unwrap() += Duration::minutes(3) + Duration::seconds(59);
         assert_eq!(
-            env.get_latest_bar(&crypto_pair, bar_duration).await?,
+            env.get_latest_minute_bar(&crypto_pair).await?,
             Some(bar_from_three_minutes_ago)
         );
 
