@@ -14,11 +14,11 @@ The following examples shows how to create and use a `SimulatedClient`:
 ```rust
 use anyhow::Result;
 use bigdecimal::BigDecimal;
-use irontrade::api::client::Client;
+use irontrade::api::Client;
 use irontrade::api::common::{Amount, CryptoPair, OrderStatus};
 use irontrade::api::request::OrderRequest;
-use irontrade::simulated::broker::SimulatedBrokerBuilder;
-use irontrade::simulated::client::SimulatedClient;
+use irontrade::simulated::SimulatedBrokerBuilder;
+use irontrade::simulated::SimulatedClient;
 use std::str::FromStr;
 
 #[tokio::main]

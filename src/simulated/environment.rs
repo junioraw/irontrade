@@ -1,10 +1,10 @@
 // Copyright (C) 2025 Agostinho Junior
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-use crate::api::client::Client;
+use crate::api::Client;
 use crate::api::common::{Account, Bar, CryptoPair, Order};
-use crate::api::environment::Environment;
-use crate::api::market::Market;
+use crate::api::Environment;
+use crate::api::Market;
 use crate::api::request::OrderRequest;
 use crate::simulated::client::SimulatedClient;
 use crate::simulated::context::SimulatedContext;
@@ -173,9 +173,9 @@ impl Environment for SimulatedEnvironment {}
 
 #[cfg(test)]
 mod tests {
-    use crate::api::client::Client;
+    use crate::api::Client;
     use crate::api::common::{Amount, Bar, CryptoPair, OrderStatus};
-    use crate::api::market::Market;
+    use crate::api::Market;
     use crate::api::request::OrderRequest;
     use crate::simulated::broker::SimulatedBrokerBuilder;
     use crate::simulated::client::SimulatedClient;
