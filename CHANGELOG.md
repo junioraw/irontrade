@@ -1,6 +1,7 @@
-0.7.0-alpha03
+0.7.0-alpha04
 ----
-
+- Remove `bar_duration` in `Market.get_latest_bar`
+- Rename `Market.get_latest_bar` to `Market.get_latest_minute_bar`
 - Add `crate::simulated::environment::SimulatedEnvironmentBuilder` and make `SimulatedEnvironment::new` private
 - Add `crate::simulated::context::SimulatedContext` and pass it as an argument for `SimulatedEnvironment` instead of
   `Clock` and
