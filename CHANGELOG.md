@@ -1,9 +1,16 @@
 0.7.0-alpha04
 ----
+- Move `crate::api::client::Client` to `crate::api::Client`
+- Move `crate::api::market::Market` to `crate::api::Market`
+- Move `crate::api::environment::Environment` to `crate::api::Environment`
+- Move `crate::simulated::broker::SimulatedBrokerBuilder` to `crate::simulated::SimulatedBrokerBuilder`
+- Move `crate::simulated::broker::SimulatedBroker` to `crate::broker::SimulatedBroker`
+- Move `crate::simulated::client::SimulatedClient` to `crate::simulated::SimulatedClient`
+- Move `crate::simulated::environment::SimulatedEnvironment` to `crate::simulated::SimulatedEnvironment`
 - Remove `bar_duration` in `Market.get_latest_bar`
 - Rename `Market.get_latest_bar` to `Market.get_latest_minute_bar`
-- Add `crate::simulated::environment::SimulatedEnvironmentBuilder` and make `SimulatedEnvironment::new` private
-- Add `crate::simulated::context::SimulatedContext` and pass it as an argument for `SimulatedEnvironment` instead of
+- Add `crate::simulated::SimulatedEnvironmentBuilder` and make `SimulatedEnvironment::new` private
+- Add `crate::simulated::SimulatedContext` and pass it as an argument for `SimulatedEnvironment` instead of
   `Clock` and
   `BarDataSource` separately
 
