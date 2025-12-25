@@ -10,6 +10,7 @@ repository = "https://github.com/junioraw/irontrade"
 
 [features]
 live_market = ["dep:reqwest", "dep:serde", "dep:serde-this-or-that"]
+default = ["live_market"]
 
 [dependencies]
 anyhow = "1.0.100"
