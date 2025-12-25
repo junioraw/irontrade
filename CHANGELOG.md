@@ -1,7 +1,7 @@
-0.7.0-alpha05
+0.7.0-alpha06
 ----
 
-- Add `crate::market::LiveMarket` struct. This is a `crate::api::Market` implementation that works for production
+- Add `crate::market::LiveMarket` struct behind a feature flag `live_market`. This is a `crate::api::Market` implementation that works for production
   irontrade implementations that don't need to implement custom live markets.
 - Move `crate::api::client::Client` to `crate::api::Client`
 - Move `crate::api::market::Market` to `crate::api::Market`
