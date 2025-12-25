@@ -1,4 +1,5 @@
 [package]
+authors = ["Agostinho Junior <junioraaw7@gmail.com>"]
 name = "irontrade"
 version = "0.7.0-alpha07"
 edition = "2024"
