@@ -13,7 +13,6 @@ use serde_this_or_that::as_string;
 use std::collections::HashMap;
 use std::str::FromStr;
 
-#[cfg(feature = "live_market")]
 pub struct LiveMarket;
 
 impl Market for LiveMarket {
