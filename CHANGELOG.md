@@ -1,4 +1,4 @@
-0.7.0-alpha06
+0.7.0-alpha07
 ----
 
 - Add `crate::market::LiveMarket` struct behind a feature flag `live_market`. This is a `crate::api::Market` implementation that works for production

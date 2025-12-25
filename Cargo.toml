@@ -1,6 +1,6 @@
 [package]
 name = "irontrade"
-version = "0.7.0-alpha06"
+version = "0.7.0-alpha07"
 edition = "2024"
 license = "GPL-3.0-or-later"
 description = """
