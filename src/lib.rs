@@ -5,5 +5,7 @@
 
 pub mod api;
 pub mod simulated;
+
+#[cfg(feature = "live_market")]
 pub mod market;
 
