@@ -7,6 +7,6 @@ use anyhow::Result;
 pub trait Market {
     fn get_latest_minute_bar(
         &self,
-        crypto_pair: &CryptoPair
+        crypto_pair: &CryptoPair,
     ) -> impl Future<Output = Result<Option<Bar>>> + Send;
 }

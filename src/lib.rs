@@ -5,4 +5,5 @@
 
 pub mod api;
 pub mod simulated;
+pub mod market;
 
