@@ -2,17 +2,20 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 use crate::api::Client;
-use crate::api::common::{Account, Bar, CryptoPair, Order};
 use crate::api::Environment;
 use crate::api::Market;
+use crate::api::common::{Account, Bar, CryptoPair, Order};
 use crate::api::request::OrderRequest;
 use crate::simulated::client::SimulatedClient;
 use crate::simulated::context::SimulatedContext;
 use anyhow::{Result, anyhow};
+use async_trait::async_trait;
 use chrono::{DateTime, Duration, Utc};
 use std::collections::HashSet;
-use async_trait::async_trait;
 
+/// [Environment] implementation that simulates price changes based on an internal clock, created by the caller and passed via a [SimulatedContext].
+/// The prices are set according to the average of the [Bar]'s low high at the "current" point in time.
+/// THe "current" [Bar] is used for the effect price of a symbol, while the market's latest bar is set to the last non overlapping [Bar], since in a real world scenario there isn't a current minute aggregated [Bar].
 pub struct SimulatedEnvironment {
     context: SimulatedContext,
     client: SimulatedClient,
@@ -88,6 +91,7 @@ impl SimulatedEnvironment {
         }
     }
 
+    /// Must be called once after the environment has been created and before any [Client] method call.
     pub fn init(&mut self) -> Result<()> {
         if self.last_processed_time.is_some() {
             return Err(anyhow!("Environment has already been initialized"));
@@ -177,8 +181,8 @@ impl Environment for SimulatedEnvironment {}
 #[cfg(test)]
 mod tests {
     use crate::api::Client;
-    use crate::api::common::{Amount, Bar, CryptoPair, OrderStatus};
     use crate::api::Market;
+    use crate::api::common::{Amount, Bar, CryptoPair, OrderStatus};
     use crate::api::request::OrderRequest;
     use crate::simulated::broker::SimulatedBrokerBuilder;
     use crate::simulated::client::SimulatedClient;
