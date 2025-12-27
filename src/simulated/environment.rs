@@ -11,6 +11,7 @@ use crate::simulated::context::SimulatedContext;
 use anyhow::{Result, anyhow};
 use chrono::{DateTime, Duration, Utc};
 use std::collections::HashSet;
+use async_trait::async_trait;
 
 pub struct SimulatedEnvironment {
     context: SimulatedContext,
@@ -123,6 +124,7 @@ impl SimulatedEnvironment {
     }
 }
 
+#[async_trait]
 impl Client for SimulatedEnvironment {
     async fn place_order(&mut self, req: OrderRequest) -> Result<String> {
         self.update()?;
@@ -145,6 +147,7 @@ impl Client for SimulatedEnvironment {
     }
 }
 
+#[async_trait]
 impl Market for SimulatedEnvironment {
     async fn get_latest_minute_bar(&self, crypto_pair: &CryptoPair) -> Result<Option<Bar>> {
         let now = self.context.clock().now();

@@ -3,10 +3,12 @@
 
 use crate::api::common::{Bar, CryptoPair};
 use anyhow::Result;
+use async_trait::async_trait;
 
+#[async_trait]
 pub trait Market {
-    fn get_latest_minute_bar(
+    async fn get_latest_minute_bar(
         &self,
         crypto_pair: &CryptoPair,
-    ) -> impl Future<Output = Result<Option<Bar>>> + Send;
+    ) -> Result<Option<Bar>>;
 }
