@@ -13,9 +13,12 @@ use async_trait::async_trait;
 use chrono::{DateTime, Duration, Utc};
 use std::collections::HashSet;
 
-/// [Environment] implementation that simulates price changes based on an internal clock, created by the caller and passed via a [SimulatedContext].
+/// [Environment] implementation that simulates price changes based on an internal clock,
+/// created by the caller and passed via a [SimulatedContext].
 /// The prices are set according to the average of the [Bar]'s low high at the "current" point in time.
-/// THe "current" [Bar] is used for the effect price of a symbol, while the market's latest bar is set to the last non overlapping [Bar], since in a real world scenario there isn't a current minute aggregated [Bar].
+/// THe "current" [Bar] is used for the effect price of a symbol,
+/// while the market's latest bar is set to the last non overlapping [Bar],
+/// since in a real world scenario there isn't a current minute aggregated [Bar].
 pub struct SimulatedEnvironment {
     context: SimulatedContext,
     client: SimulatedClient,
