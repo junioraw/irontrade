@@ -8,6 +8,7 @@ use crate::simulated::broker::SimulatedBroker;
 use anyhow::Result;
 use bigdecimal::BigDecimal;
 use std::collections::HashMap;
+use async_trait::async_trait;
 
 #[derive(Clone)]
 pub struct SimulatedClient {
@@ -45,6 +46,7 @@ impl SimulatedClient {
     }
 }
 
+#[async_trait]
 impl Client for SimulatedClient {
     async fn place_order(&mut self, req: OrderRequest) -> Result<String> {
         let order_id = self.broker.place_order(req)?;

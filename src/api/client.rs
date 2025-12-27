@@ -4,13 +4,15 @@
 use crate::api::common::{Account, Order};
 use crate::api::request::OrderRequest;
 use anyhow::Result;
+use async_trait::async_trait;
 
+#[async_trait]
 pub trait Client {
-    fn place_order(&mut self, req: OrderRequest) -> impl Future<Output = Result<String>> + Send;
+    async fn place_order(&mut self, req: OrderRequest) -> Result<String>;
 
-    fn get_orders(&mut self) -> impl Future<Output = Result<Vec<Order>>> + Send;
+    async fn get_orders(&mut self) -> Result<Vec<Order>>;
 
-    fn get_order(&mut self, order_id: &str) -> impl Future<Output = Result<Order>> + Send;
+    async fn get_order(&mut self, order_id: &str) -> Result<Order>;
 
-    fn get_account(&mut self) -> impl Future<Output = Result<Account>> + Send;
+    async fn get_account(&mut self) -> Result<Account>;
 }
