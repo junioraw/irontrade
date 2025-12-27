@@ -1,4 +1,4 @@
-0.7.0-alpha08
+0.7.0
 ----
 
 - Add `crate::live_market::create_env` behind an enabled feature flag `live_market`. This is a `crate::api::Environment`
