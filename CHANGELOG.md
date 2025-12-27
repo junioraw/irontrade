@@ -1,7 +1,7 @@
 0.7.0-alpha08
 ----
 
-- Add `crate::live_market::create_env` behind a feature flag `live_market`. This is a `crate::api::Environment`
+- Add `crate::live_market::create_env` behind an enabled feature flag `live_market`. This is a `crate::api::Environment`
   implementation that works for irontrade implementations that don't need to implement custom live markets.
 - Move `crate::api::client::Client` to `crate::api::Client`
 - Move `crate::api::market::Market` to `crate::api::Market`
